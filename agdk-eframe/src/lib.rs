@@ -29,13 +29,13 @@ struct MyApp {
 }
 
 #[no_mangle]
-pub extern fn rust_greeting() -> String {
-    // Get a string containing the passed pipeline launch syntax
-    let pipeline_str = "gst launch vhvh";
+pub extern fn rust_greeting() {
+    // Get a string containing the passed pipeline launch syntax audiotestsrc wave=saw freq=205 ! autoaudiosink
+    let pipeline_str = "audiotestsrc wave=saw freq=205 ! autoaudiosink";
     
     gst::init().unwrap();
     let gst_version_string = gst::version_string();
-    return gst_version_string.to_string();
+    
     // Let GStreamer create a pipeline from the parsed launch syntax on the cli.
     // In comparison to the launch_glib_main example, this is using the advanced launch syntax
     // parsing API of GStreamer. The function returns a Result, handing us the pipeline if
@@ -46,35 +46,50 @@ pub extern fn rust_greeting() -> String {
     // Especially GUIs should probably handle this case, to tell users that they need to
     // install the corresponding gstreamer plugins.
 
-    // let bus = pipeline.bus().unwrap();
+    let mut context = gst::ParseContext::new();
+    let pipeline =
+        match gst::parse_launch_full(&pipeline_str, Some(&mut context), gst::ParseFlags::empty()) {
+            Ok(pipeline) => pipeline,
+            Err(err) => {
+                if let Some(gst::ParseError::NoSuchElement) = err.kind::<gst::ParseError>() {
+                    println!("Missing element(s): {:?}", context.missing_elements());
+                } else {
+                    println!("Failed to parse pipeline: {err}")
+                }
 
-    // pipeline
-    //     .set_state(gst::State::Playing)
-    //     .expect("Unable to set the pipeline to the `Playing` state");
+                return
+            }
+        };
+    let bus = pipeline.bus().unwrap();
 
-    // for msg in bus.iter_timed(gst::ClockTime::NONE) {
-    //     use gst::MessageView;
+    pipeline
+        .set_state(gst::State::Playing)
+        .expect("Unable to set the pipeline to the `Playing` state");
 
-    //     match msg.view() {
-    //         MessageView::Eos(..) => break,
-    //         MessageView::Error(err) => {
-    //             println!(
-    //                 "Error from {:?}: {} ({:?})",
-    //                 err.src().map(|s| s.path_string()),
-    //                 err.error(),
-    //                 err.debug()
-    //             );
-    //             break;
-    //         }
-    //         _ => (),
-    //     }
-    // }
+    for msg in bus.iter_timed(gst::ClockTime::NONE) {
+        use gst::MessageView;
 
-    // pipeline
-    //     .set_state(gst::State::Null)
-    //     .expect("Unable to set the pipeline to the `Null` state");
+        match msg.view() {
+            MessageView::Eos(..) => break,
+            MessageView::Error(err) => {
+                println!(
+                    "Error from {:?}: {} ({:?})",
+                    err.src().map(|s| s.path_string()),
+                    err.error(),
+                    err.debug()
+                );
+                break;
+            }
+            _ => (),
+        }
+    }
 
-    // debug!("Using {} as player", gst::version_string());
+    pipeline
+        .set_state(gst::State::Null)
+        .expect("Unable to set the pipeline to the `Null` state");
+
+    debug!("Using {} as player", gst::version_string());
+    
     // let gst_version_string = gst::version_string();
     // CString::new(gst::version_string().to_owned()).unwrap().into_raw()
 }
@@ -107,12 +122,13 @@ impl eframe::App for MyApp {
                 ui.text_edit_singleline(&mut self.name)
                     .labelled_by(name_label.id);
             });
-            ui.add(egui::Slider::new(&mut self.age, 0..=120).text("11111 age"));
+            ui.add(egui::Slider::new(&mut self.age, 0..=120).text("age"));
                     let button = ui.button("Click me please");
                     if button.clicked() {
                         // Call a function when the button is clicked
                         self.age += 1;
-                        self.version = rust_greeting();
+                        self.version = "version".to_string();
+                        rust_greeting();
                     }
             ui.label(format!("Name '{}', Age {}, version '{}'", self.name, self.age, self.version));
                       // fn do_something() {
@@ -128,7 +144,7 @@ impl eframe::App for MyApp {
             ui.with_layout(egui::Layout::bottom_up(egui::Align::LEFT), |ui| {
                 ui.horizontal(|ui| {
                     ui.spacing_mut().item_spacing.x = 0.0;
-                    ui.label("2023 powered by ");
+                    ui.label("powered by ");
                     ui.hyperlink_to("egui", "https://github.com/emilk/egui");
                     ui.label(" and ");
                     ui.hyperlink_to(
@@ -155,7 +171,7 @@ fn do_something() {
 fn _main(mut options: NativeOptions) -> eframe::Result<()> {
     options.renderer = Renderer::Wgpu;
     eframe::run_native(
-        "My egui 23423423 App sffs",
+        "My egui App",
         options,
         Box::new(|_cc| Box::<MyApp>::default()),
     )
