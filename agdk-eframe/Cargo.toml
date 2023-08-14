@@ -15,31 +15,50 @@ egui = "0.22"
 eframe = { version = "0.22", features = [ "wgpu", "android-game-activity" ] }
 egui_demo_lib = "0.22"
 
-glib = { git = "https://github.com/gtk-rs/gtk-rs-core" }
-#gst = { package = "gstreamer",version = "0.20.7"}
-
-gstreamer = "0.20.7"
-gstreamer-sys = "0.20.7"
-gstreamer-app = "0.20.7"
-gstreamer-gl = "0.20.7"
-gstreamer-gl-sys = "0.20.7"
-gstreamer-gl-x11-sys = "0.20.7"
-
 [target.'cfg(not(target_os = "android"))'.dependencies]
 env_logger = "0.10"
 
 [target.'cfg(target_os = "android")'.dependencies]
 android_logger = "0.13.1"
+jni = { version = "0.5", default-features = false }
+gst = { version = "0.20.5", package = "gstreamer", default-features = false }
+log = { version = "0.4.18", default-features = false }
 
 [features]
 default = []
 desktop = []
 
 [lib]
-name="main"
 crate_type=["cdylib"]
 
-[[bin]]
-path="src/lib.rs"
-name="agdk-eframe"
-required-features = [ "desktop" ]
+[package.metadata.android]
+package = "com.myapp"
+apk_name = "myapp"
+
+[[package.metadata.android.uses_feature]]
+name = "android.hardware.vulkan.level"
+required = true
+version = 1
+
+[[package.metadata.android.uses_permission]]
+name = "android.permission.WRITE_EXTERNAL_STORAGE"
+# max_sdk_version = 18
+# The target Android API level.
+target_sdk_version = 30
+min_sdk_version = 21
+
+[[package.metadata.android.uses_permission]]
+name = "android.permission.INTERNET"
+
+[package.metadata.android.application]
+label = "MyApp"
+
+build_targets = [ "aarch64-linux-android" ]
+
+
+ 
+# See: https://developer.android.com/guide/topics/manifest/activity-element#screen
+orientation = "portrait"
+
+runtime_libs = "/home/alex/Документы/android/media/examples/android/libgstreamer_android_gen/out/Gstreamer-1.22.5/lib"
+

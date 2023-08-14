@@ -15,3 +15,17 @@ cargo ndk -t arm64-v8a -o app/src/main/jniLibs/  build
 ./gradlew installDebug
 adb shell am start -n co.realfit.agdkeframe/.MainActivity
 ```
+```
+rustup target add aarch64-linux-android
+cargo install cargo-apk
+
+export ANDROID_HOME=/home/alex/Android/Sdk
+export ANDROID_NDK_HOME=$ANDROID_HOME/ndk/25.2.9519653
+
+export PKG_CONFIG_PATH=/home/alex/Документы/android/media/examples/android/libgstreamer_android_gen/gst-android-build/arm64-v8a/lib/pkgconfig
+
+RUSTFLAGS="-lffi" cargo apk build
+
+adb install /home/alex/Документы/android/rust-android-examples/agdk-eframe/target/debug/apk/myapp.apk
+
+```
