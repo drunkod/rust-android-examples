@@ -25,16 +25,17 @@ struct MyApp {
     label: String,
     age: u32,
     value: u32,
+    version: String,
 }
 
 #[no_mangle]
-pub extern fn rust_greeting() -> *mut c_char {
+pub extern fn rust_greeting() -> String {
     // Get a string containing the passed pipeline launch syntax
-    let pipeline_str = "gst launch";
+    let pipeline_str = "gst launch vhvh";
     
     gst::init().unwrap();
     let gst_version_string = gst::version_string();
-    CString::new(format!("hello world {}, {}", pipeline_str, gst_version_string).to_owned()).unwrap().into_raw()
+    return gst_version_string.to_string();
     // Let GStreamer create a pipeline from the parsed launch syntax on the cli.
     // In comparison to the launch_glib_main example, this is using the advanced launch syntax
     // parsing API of GStreamer. The function returns a Result, handing us the pipeline if
@@ -106,15 +107,14 @@ impl eframe::App for MyApp {
                 ui.text_edit_singleline(&mut self.name)
                     .labelled_by(name_label.id);
             });
-            ui.add(egui::Slider::new(&mut self.age, 0..=120).text("age"));
-                    let button = ui.button("Click me");
+            ui.add(egui::Slider::new(&mut self.age, 0..=120).text("11111 age"));
+                    let button = ui.button("Click me please");
                     if button.clicked() {
                         // Call a function when the button is clicked
                         self.age += 1;
-                          do_something();
+                        self.version = rust_greeting();
                     }
-            ui.label(format!("Hello '{}', age {}", self.name, self.age));
-
+            ui.label(format!("Name '{}', Age {}, version '{}'", self.name, self.age, self.version));
                       // fn do_something() {
                           // Initialize GStreamer
                        //  gst::init().unwrap();
@@ -128,7 +128,7 @@ impl eframe::App for MyApp {
             ui.with_layout(egui::Layout::bottom_up(egui::Align::LEFT), |ui| {
                 ui.horizontal(|ui| {
                     ui.spacing_mut().item_spacing.x = 0.0;
-                    ui.label("powered by ");
+                    ui.label("2023 powered by ");
                     ui.hyperlink_to("egui", "https://github.com/emilk/egui");
                     ui.label(" and ");
                     ui.hyperlink_to(
@@ -149,13 +149,13 @@ fn do_something() {
 
     // Initialize GStreamer
 
-    gst::init().unwrap();
+    // gst::init().unwrap();
 }
 
 fn _main(mut options: NativeOptions) -> eframe::Result<()> {
     options.renderer = Renderer::Wgpu;
     eframe::run_native(
-        "My egui App",
+        "My egui 23423423 App sffs",
         options,
         Box::new(|_cc| Box::<MyApp>::default()),
     )

@@ -24,12 +24,14 @@ public class MainActivity extends GameActivity {
         // and you use libc++_shared.so, you must load the shared library before any other
         // library that depends on it."
         // See https://developer.android.com/ndk/guides/cpp-support#shared_runtimes
-        //System.loadLibrary("c++_shared");
-
+        System.loadLibrary("c++_shared");
+        System.loadLibrary("gstreamer_android");
         // Load the native library.
         // The name "android-game" depends on your CMake configuration, must be
         // consistent here and inside AndroidManifect.xml
         System.loadLibrary("main");
+        // mnb
+
     }
 
     private void hideSystemUI() {

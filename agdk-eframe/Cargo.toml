@@ -29,6 +29,7 @@ default = []
 desktop = []
 
 [lib]
+name="main"
 crate_type=["cdylib"]
 
 [package.metadata.android]
