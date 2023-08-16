@@ -29,11 +29,20 @@ export JAVA_HOME=/opt/android-studio/jbr
 
 RUSTFLAGS="-lffi" cargo apk build
 
-adb install /home/alex/Документы/android/rust-android-examples/agdk-eframe/target/debug/apk/myapp.apk
-
 ./gradlew clean assembleDebug installDebug
 adb shell am start -n co.realfit.agdkeframe/.MainActivity
 adb logcat | egrep '(agdkeframe|gst)'
 
 
+```
+
+Add gst demon 
+https://developer.ridgerun.com/wiki/index.php/GStreamer_Daemon_-_Building_GStreamer_Daemon
+
+```
+sudo ./autogen.sh
+mkdir build
+cd build
+sudo ./configure --host=aarch64-linux-gnu
+sudo make
 ```
