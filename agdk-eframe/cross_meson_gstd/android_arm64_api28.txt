@@ -1,0 +1,22 @@
+[host_machine]
+system = 'android'
+cpu_family = 'aarch64'
+cpu = 'aarch64'
+endian = 'little'
+
+[properties]
+sys_root = '/workspace/gstd-1.x/ndk/android-ndk-r25c/toolchains/llvm/prebuilt/linux-x86_64/sysroot'
+c_args = '-I/workspace/gstd-1.x/ndk/android-ndk-r25c/toolchains/llvm/prebuilt/linux-x86_64/sysroot/usr/include/gstreamer-1.0 -I/workspace/gstd-1.x/ndk/android-ndk-r25c/toolchains/llvm/prebuilt/linux-x86_64/sysroot/usr/include/glib-2.0 -I/workspace/gstd-1.x/ndk/android-ndk-r25c/toolchains/llvm/prebuilt/linux-x86_64/sysroot/usr/lib/glib-2.0/include -I/workspace/gstd-1.x/ndk/android-ndk-r25c/toolchains/llvm/prebuilt/linux-x86_64/sysroot/usr/include/json-glib-1.0 -I/workspace/gstd-1.x/ndk/android-ndk-r25c/toolchains/llvm/prebuilt/linux-x86_64/sysroot/usr/include/libsoup-2.4 -I/usr/include'
+# libc_link_args = ['-L/workspace/gstd-1.x/ndk/arm64/lib']
+
+pkg_config_libdir = '/workspace/gstd-1.x/ndk/android-ndk-r25c/toolchains/llvm/prebuilt/linux-x86_64/sysroot/usr/lib/pkgconfig'
+c_ld = 'gold'
+cpp_ld = 'gold'
+
+
+[binaries]
+c =     '/workspace/gstd-1.x/ndk/android-ndk-r25c/toolchains/llvm/prebuilt/linux-x86_64/bin/aarch64-linux-android28-clang'
+cpp =   '/workspace/gstd-1.x/ndk/android-ndk-r25c/toolchains/llvm/prebuilt/linux-x86_64/bin/aarch64-linux-android28-clang++'
+ar =    '/workspace/gstd-1.x/ndk/android-ndk-r25c/toolchains/llvm/prebuilt/linux-x86_64/bin/llvm-ar'
+strip = '/workspace/gstd-1.x/ndk/android-ndk-r25c/toolchains/llvm/prebuilt/linux-x86_64/bin/llvm-strip'
+pkg-config = '/usr/bin/pkg-config'
