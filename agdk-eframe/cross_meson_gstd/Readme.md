@@ -97,6 +97,16 @@ sudo cp /usr/lib/x86_64-linux-gnu/pkgconfig/libedit.pc /workspace/gstd-1.x/ndk/a
 
 how compile libs with nix
 
+```
+mkdir nix-build
+cd nix-build
+nix-build '<nixpkgs>' -A pkgsCross.raspberryPi.openssl
+
+```
+
+https://nixos.wiki/wiki/Cheatsheet#Cross-compile_packages
+
+
 https://matthewbauer.us/blog/beginners-guide-to-cross.html
 
 ln -s  /home/alex/Документы/android/gstd-build/libgstd/.libs/libgstd-1.0.so /home/alex/Документы/android/media/examples/android/libgstreamer_android_gen/out/Gstreamer-1.22.5/lib/arm64-v8a/libgstd-1.0.so

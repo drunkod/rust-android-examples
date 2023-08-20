@@ -26,23 +26,8 @@ export PKG_CONFIG_PATH=/home/alex/Документы/android/media/examples/andr
 
 export JAVA_HOME=/opt/android-studio/jbr
 #17 ver
-
 RUSTFLAGS="-lffi" cargo apk build
 
 ./gradlew clean assembleDebug installDebug
 adb shell am start -n co.realfit.agdkeframe/.MainActivity
 adb logcat | egrep '(agdkeframe|gst)'
-
-
-```
-
-Add gst demon 
-https://developer.ridgerun.com/wiki/index.php/GStreamer_Daemon_-_Building_GStreamer_Daemon
-
-```
-sudo ./autogen.sh
-mkdir build
-cd build
-sudo ./configure --host=aarch64-linux-gnu
-sudo make
-```
