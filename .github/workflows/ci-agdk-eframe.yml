@@ -48,7 +48,7 @@ jobs:
       - name: Build agdk-eframe example
         working-directory: agdk-eframe
         run: >
-          RUSTFLAGS="-lffi" CARGO_TARGET_DIR=$GITHUB_WORKSPACE/shared-target cargo apk ${{ matrix.cargo_apk_args }} build &&
+          RUSTFLAGS="-lffi" CARGO_TARGET_DIR=$GITHUB_WORKSPACE/shared-target cargo apk build &&
           ./gradlew build &&
           find $GITHUB_WORKSPACE/shared-target -iname '*.so' -exec rm {} \;
 
