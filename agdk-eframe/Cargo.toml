@@ -18,12 +18,12 @@ egui_demo_lib = "0.22"
 glib = { git = "https://github.com/gtk-rs/gtk-rs-core" }
 #gst = { package = "gstreamer",version = "0.20.7"}
 
-gstreamer = "0.20.7"
-gstreamer-sys = "0.20.7"
-gstreamer-app = "0.20.7"
-gstreamer-gl = "0.20.7"
-gstreamer-gl-sys = "0.20.7"
-gstreamer-gl-x11-sys = "0.20.7"
+gstreamer = "0.20"
+gstreamer-sys = "0.20"
+gstreamer-app = "0.20"
+gstreamer-gl = "0.20"
+gstreamer-gl-sys = "0.20"
+gstreamer-gl-x11-sys = "0.20"
 
 [target.'cfg(not(target_os = "android"))'.dependencies]
 env_logger = "0.10"
