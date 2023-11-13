@@ -5,6 +5,10 @@ edition = "2021"
 resolver = "2"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+[features]
+default = []
+persistence = ["serde", "egui_node_graph/persistence", "eframe/persistence"]
+#desktop = []
 
 [dependencies]
 log = "0.4"
@@ -12,34 +16,50 @@ winit = { version = "0.28", features = [ "android-game-activity" ] }
 wgpu = "0.16.0"
 pollster = "0.2"
 egui = "0.22"
-eframe = { version = "0.22", features = [ "wgpu", "android-game-activity" ] }
-egui_demo_lib = "0.22"
-
-glib = { git = "https://github.com/gtk-rs/gtk-rs-core" }
-#gst = { package = "gstreamer",version = "0.20.7"}
-
-gstreamer = "0.20"
-gstreamer-sys = "0.20"
-gstreamer-app = "0.20"
-gstreamer-gl = "0.20"
-gstreamer-gl-sys = "0.20"
-gstreamer-gl-x11-sys = "0.20"
+eframe = { version = "0.22", features = [ "wgpu", "android-game-activity"] }
+egui_node_graph = "0.4.0"
+anyhow = "1.0"
+serde = { version = "1.0", optional = true }
 
 [target.'cfg(not(target_os = "android"))'.dependencies]
 env_logger = "0.10"
 
 [target.'cfg(target_os = "android")'.dependencies]
 android_logger = "0.13.1"
-
-[features]
-default = []
-desktop = []
+jni = { version = "0.5", default-features = false }
+gst = { version = "0.20.5", package = "gstreamer", default-features = false }
+log = { version = "0.4.18", default-features = false }
 
 [lib]
 name="main"
 crate_type=["cdylib"]
 
-[[bin]]
-path="src/lib.rs"
-name="agdk-eframe"
-required-features = [ "desktop" ]
+[package.metadata.android]
+package = "com.myapp"
+apk_name = "myapp"
+
+[[package.metadata.android.uses_feature]]
+name = "android.hardware.vulkan.level"
+required = true
+version = 1
+
+[[package.metadata.android.uses_permission]]
+name = "android.permission.WRITE_EXTERNAL_STORAGE"
+# max_sdk_version = 18
+# The target Android API level.
+target_sdk_version = 30
+min_sdk_version = 21
+
+[[package.metadata.android.uses_permission]]
+name = "android.permission.INTERNET"
+
+[package.metadata.android.application]
+label = "MyApp"
+
+build_targets = [ "aarch64-linux-android" ]
+
+# See: https://developer.android.com/guide/topics/manifest/activity-element#screen
+orientation = "portrait"
+
+#runtime_libs = "/home/alex/Документы/android/media/examples/android/libgstreamer_android_gen/out/Gstreamer-1.22.5/lib"
+
