@@ -1,7 +1,9 @@
 # file: flake.nix
 {
   description = "A GStreamer development flake";
-
+  inputs = {
+    nixpkgs.url = "nixpkgs/release-20.03";
+  };
   outputs = { self, nixpkgs }:
     let
       system = "x86_64-linux";
