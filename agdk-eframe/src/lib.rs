@@ -1,8 +1,3 @@
-#![cfg_attr(not(debug_assertions), windows_subsystem = "windows")] // hide console window on Windows in release
-
-extern crate gst;
-extern crate log;
-
 use std::{env, process};
 use gst::{prelude::*};
 use log::{debug};
@@ -11,13 +6,15 @@ use log::{debug};
 use std::os::raw::c_char;
 use std::ffi::CString;
 
+
+
 use eframe::egui;
-use eframe::NativeOptions;
-use eframe::Renderer;
+
+use eframe::{NativeOptions, Renderer};
 
 
 #[cfg(target_os = "android")]
-use winit::platform::android::activity::AndroidApp;
+use egui_winit::winit::platform::android::activity::AndroidApp;
 
 #[derive(Default)]
 struct MyApp {
@@ -27,6 +24,7 @@ struct MyApp {
     value: u32,
     version: String,
 }
+
 
 #[no_mangle]
 pub extern fn rust_greeting() {
@@ -161,12 +159,7 @@ impl eframe::App for MyApp {
         });
     }
 }
-fn do_something() {
 
-    // Initialize GStreamer
-
-    // gst::init().unwrap();
-}
 
 fn _main(mut options: NativeOptions) -> eframe::Result<()> {
     options.renderer = Renderer::Wgpu;
@@ -180,7 +173,8 @@ fn _main(mut options: NativeOptions) -> eframe::Result<()> {
 #[cfg(target_os = "android")]
 #[no_mangle]
 fn android_main(app: AndroidApp) {
-    use winit::platform::android::EventLoopBuilderExtAndroid;
+    
+    use egui_winit::winit::platform::android::EventLoopBuilderExtAndroid;
 
     android_logger::init_once(
         android_logger::Config::default().with_max_level(log::LevelFilter::Debug),
@@ -189,6 +183,8 @@ fn android_main(app: AndroidApp) {
     let options = NativeOptions {
         event_loop_builder: Some(Box::new(move |builder| {
             builder.with_android_app(app);
+
+            // EventLoopBuilderExtAndroid::with_android_app(builder, app);
         })),
         ..Default::default()
     };
