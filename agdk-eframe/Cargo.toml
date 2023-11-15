@@ -7,12 +7,14 @@ resolver = "2"
 [dependencies]
 log = "0.4"
 # winit = { version = "0.29.3", features = [ "android-game-activity" ] }
-egui-winit = { version = "0.23", features = [ "android-game-activity" ] }
-wgpu = "0.17.1"
+# egui-winit = { version = "0.23", features = [ "android-game-activity" ] }
+# wgpu = "0.17.1"
 pollster = "0.2"
-egui = "0.23"
-eframe = { version = "0.23", features = [ "wgpu", "android-game-activity"] }
-egui_demo_lib = "0.23"
+# egui = "0.23"
+# eframe = { version = "0.23", features = [ "wgpu", "android-game-activity"] }
+# egui_demo_lib = "0.23"
+slint = { version = "1.3.0" }
+i-slint-backend-android-activity = { version = "=1.3.0", features = ["game-activity"] }
 
 [target.'cfg(not(target_os = "android"))'.dependencies]
 env_logger = "0.10"
@@ -24,7 +26,8 @@ gst = { version = "0.20.5", package = "gstreamer", default-features = false }
 log = { version = "0.4.18", default-features = false }
 
 [lib]
-name="main"
+path = "src/lib.rs"
+name="agdk_eframe"
 crate_type=["cdylib"]
 
 [package.metadata.android]

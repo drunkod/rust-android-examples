@@ -1,0 +1,29 @@
+import { Switch, Button, LineEdit, VerticalBox } from "std-widgets.slint";
+
+
+export component Recipe inherits Window {
+    in-out property <int> counter: 0;
+    callback button-pressed <=> button.clicked;
+    callback switch-pressed <=> switch.toggled;
+    in-out property text <=> txt.text;
+    VerticalBox {
+
+        width: 200px;
+        height: 25px;
+        switch := Switch {
+            width: parent.width;
+            height: parent.height;
+            text: "Hello World " + root.counter + " times";
+        }
+        button := Button {
+            text: "Button, pressed " + root.counter + " times";
+        }
+        txt := LineEdit {
+        font-size: 14px;
+        width: parent.width;
+        height: parent.height;
+        placeholder-text: "Enter text here";
+        text: "videotestsrc is-live=true ! videoconvert ! x264enc bitrate=1000 tune=zerolatency ! video/x-h264 ! h264parse ! video/x-h264 ! queue ! flvmux name=mux ! rtmp2sink location=rtmps://dc4-1.rtmp.t.me/s/4018499832:im0paW2eEZTVdPI_JN2VaQ audiotestsrc is-live=true ! audioconvert ! audioresample ! audio/x-raw,rate=48000 ! avenc_aac bitrate=96000 ! audio/mpeg ! aacparse ! audio/mpeg, mpegversion=4 ! mux.";
+    }
+    }
+}

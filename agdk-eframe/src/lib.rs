@@ -1,4 +1,4 @@
-use std::{env, process};
+use std::{env, process, thread};
 use gst::{prelude::*};
 use log::{debug};
 //add RUSTFLAGS="-lffi" with error dlopen failed: cannot locate symbol "ffi_type_void" referenced by
@@ -8,13 +8,13 @@ use std::ffi::CString;
 
 
 
-use eframe::egui;
+// use eframe::egui;
 
-use eframe::{NativeOptions, Renderer};
+// use eframe::{NativeOptions, Renderer};
 
 
 #[cfg(target_os = "android")]
-use egui_winit::winit::platform::android::activity::AndroidApp;
+// use egui_winit::winit::platform::android::activity::AndroidApp;
 
 #[derive(Default)]
 struct MyApp {
@@ -27,9 +27,9 @@ struct MyApp {
 
 
 #[no_mangle]
-pub extern fn rust_greeting() {
+pub extern fn rust_greeting(pipeline_str: String) {
     // Get a string containing the passed pipeline launch syntax audiotestsrc wave=saw freq=205 ! autoaudiosink
-    let pipeline_str = "audiotestsrc wave=saw freq=205 ! autoaudiosink";
+    // let pipeline_str = "audiotestsrc wave=saw freq=205 ! autoaudiosink";
     
     gst::init().unwrap();
     let gst_version_string = gst::version_string();
@@ -93,113 +93,138 @@ pub extern fn rust_greeting() {
 }
 
 
-impl eframe::App for MyApp {
-    fn update(&mut self, ctx: &egui::Context, _frame: &mut eframe::Frame) {
-     egui::TopBottomPanel::top("top_panel").show(ctx, |ui| {
-            // The top panel is often a good place for a menu bar:
-            egui::menu::bar(ui, |ui| {
-                ui.menu_button("File", |ui| {
-                    if ui.button("Quit").clicked() {
-                        _frame.close();
-                    }
-                });
-            });
-        });
-
-        egui::SidePanel::left("side_panel").show(ctx, |ui| {
-            ui.heading("Side Panel");
-
-            ui.horizontal(|ui| {
-                ui.label("Write something: ");
-
-            });
-
-            ui.heading("My egui Application");
-            ui.horizontal(|ui| {
-                let name_label = ui.label("Your name: ");
-                ui.text_edit_singleline(&mut self.name)
-                    .labelled_by(name_label.id);
-            });
-            ui.add(egui::Slider::new(&mut self.age, 0..=120).text("age"));
-                    let button = ui.button("Click me please");
-                    if button.clicked() {
-                        // Call a function when the button is clicked
-                        self.age += 1;
-                        self.version = "version".to_string();
-                        rust_greeting();
-                    }
-            ui.label(format!("Name '{}', Age {}, version '{}'", self.name, self.age, self.version));
-                      // fn do_something() {
-                          // Initialize GStreamer
-                       //  gst::init().unwrap();
-
-                        // Do something when the button is clicked.
-                        //   println!("The button was clicked!");
-                       //  }
+// impl eframe::App for MyApp {
+//     fn update(&mut self, ctx: &egui::Context, _frame: &mut eframe::Frame) {
 
 
+//      egui::TopBottomPanel::top("top_panel").show(ctx, |ui| {
+//             // The top panel is often a good place for a menu bar:
+//             egui::menu::bar(ui, |ui| {
+//                 ui.menu_button("File", |ui| {
+//                     if ui.button("Quit").clicked() {
+//                         _frame.close();
+//                     }
+//                 });
+//             });
+//         });
 
-            ui.with_layout(egui::Layout::bottom_up(egui::Align::LEFT), |ui| {
-                ui.horizontal(|ui| {
-                    ui.spacing_mut().item_spacing.x = 0.0;
-                    ui.label("powered by ");
-                    ui.hyperlink_to("egui", "https://github.com/emilk/egui");
-                    ui.label(" and ");
-                    ui.hyperlink_to(
-                        "eframe",
-                        "https://github.com/emilk/egui/tree/master/crates/eframe",
-                    );
-                    ui.label(".");
-                });
-            });
-        });
+//         egui::SidePanel::left("side_panel").show(ctx, |ui| {
+//             ui.heading("Side Panel");
 
-        egui::CentralPanel::default().show(ctx, |ui| {
+//             ui.horizontal(|ui| {
+//                 ui.label("Write something: ");
 
-        });
-    }
-}
+//             });
+
+//             ui.heading("My egui Application");
+//             ui.horizontal(|ui| {
+//                 let name_label = ui.label("Your name: ");
+//                 ui.text_edit_singleline(&mut self.name)
+//                     .labelled_by(name_label.id);
+//             });
+//             ui.add(egui::Slider::new(&mut self.age, 0..=120).text("age"));
+//                     let button = ui.button("Click me please");
+//                     if button.clicked() {
+//                         // Call a function when the button is clicked
+//                         self.age += 1;
+//                         self.version = "version".to_string();
+//                         rust_greeting();
+//                     }
+//             ui.label(format!("Name '{}', Age {}, version '{}'", self.name, self.age, self.version));
+//                       // fn do_something() {
+//                           // Initialize GStreamer
+//                        //  gst::init().unwrap();
+
+//                         // Do something when the button is clicked.
+//                         //   println!("The button was clicked!");
+//                        //  }
 
 
-fn _main(mut options: NativeOptions) -> eframe::Result<()> {
-    options.renderer = Renderer::Wgpu;
-    eframe::run_native(
-        "My egui App",
-        options,
-        Box::new(|_cc| Box::<MyApp>::default()),
-    )
-}
+
+//             ui.with_layout(egui::Layout::bottom_up(egui::Align::LEFT), |ui| {
+//                 ui.horizontal(|ui| {
+//                     ui.spacing_mut().item_spacing.x = 0.0;
+//                     ui.label("powered by ");
+//                     ui.hyperlink_to("egui", "https://github.com/emilk/egui");
+//                     ui.label(" and ");
+//                     ui.hyperlink_to(
+//                         "eframe",
+//                         "https://github.com/emilk/egui/tree/master/crates/eframe",
+//                     );
+//                     ui.label(".");
+//                 });
+//             });
+//         });
+
+//         egui::CentralPanel::default().show(ctx, |ui| {
+
+//         });
+//     }
+// }
+
+
+// fn _main(mut options: NativeOptions) -> eframe::Result<()> {
+//     options.renderer = Renderer::Wgpu;
+//     eframe::run_native(
+//         "My egui App",
+//         options,
+//         Box::new(|_cc| Box::<MyApp>::default()),
+//     )
+// }
 
 #[cfg(target_os = "android")]
 #[no_mangle]
-fn android_main(app: AndroidApp) {
-    
-    use egui_winit::winit::platform::android::EventLoopBuilderExtAndroid;
-
+fn android_main(app: i_slint_backend_android_activity::AndroidApp) {
     android_logger::init_once(
         android_logger::Config::default().with_max_level(log::LevelFilter::Debug),
     );
+    
+    // let app_clone = app.clone();
+    slint::platform::set_platform(Box::new(
+        i_slint_backend_android_activity::AndroidPlatform::new(app)
+    )).unwrap();
 
-    let options = NativeOptions {
-        event_loop_builder: Some(Box::new(move |builder| {
-            builder.with_android_app(app);
+    // ... rest of your code ...
+    // slint::slint!{
+    //     export component MainWindow inherits Window {
+    //         Text { text: "Hello World"; }
+    //     }
+    // }
+    slint::slint!(import { Recipe } from "../agdk-eframe/ui/button_native.slint";);
 
-            // EventLoopBuilderExtAndroid::with_android_app(builder, app);
-        })),
-        ..Default::default()
-    };
-
-    _main(options).unwrap_or_else(|err| {
-        log::error!("Failure while running EFrame application: {err:?}");
-    });
+    let recipe = Recipe::new().unwrap();
+    let recipe_weak = recipe.as_weak();
+    recipe.on_switch_pressed(move || {
+        let recipe = recipe_weak.upgrade().unwrap();
+        let mut value = recipe.get_counter();
+        value = value + 1;
+        recipe.set_counter(value);
+        let pipeline_str = recipe.get_text().to_owned().to_string();
+        thread::spawn(move || {
+            rust_greeting(pipeline_str);
+        });
+        // let mut text = recipe.get_text();
+        // rust_greeting(&text);
+        // custom show_soft_input
+        // app_clone.show_soft_input(true);
+    });    
+    // recipe.on_button_pressed(move || {
+    //     let recipe = recipe_weak.upgrade().unwrap();
+    //     let mut value = recipe.get_counter();
+    //     value = value + 1;
+    //     recipe.set_counter(value);
+    //     rust_greeting();
+    // });
+    recipe.run().unwrap();
+    
+    // MainWindow::new().unwrap().run().unwrap();
 }
+// #[cfg(not(target_os = "android"))]
+// fn main() {
+//     env_logger::builder()
+//         .filter_level(log::LevelFilter::Warn) // Default Log Level
+//         .parse_default_env()
+//         .init();
 
-#[cfg(not(target_os = "android"))]
-fn main() {
-    env_logger::builder()
-        .filter_level(log::LevelFilter::Warn) // Default Log Level
-        .parse_default_env()
-        .init();
-
-    _main(NativeOptions::default());
-}
+//     _main(NativeOptions::default());
+// }
