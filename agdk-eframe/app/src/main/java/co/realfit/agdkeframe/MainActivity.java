@@ -15,6 +15,9 @@ import android.os.Bundle;
 import android.view.View;
 import android.view.WindowManager;
 
+import android.text.InputType;
+import android.view.inputmethod.EditorInfo;
+
 public class MainActivity extends GameActivity {
 
     static {
@@ -62,6 +65,7 @@ public class MainActivity extends GameActivity {
         // We set the fields in native_engine.cpp.
         // super.setImeEditorInfoFields(InputType.TYPE_CLASS_TEXT,
         //     IME_ACTION_NONE, IME_FLAG_NO_FULLSCREEN );
+        super.setImeEditorInfoFields(InputType.TYPE_CLASS_TEXT, EditorInfo.IME_ACTION_NONE, EditorInfo.IME_FLAG_NO_FULLSCREEN);
         super.onCreate(savedInstanceState);
 
             // Hide the action bar to fix touch screen bug
