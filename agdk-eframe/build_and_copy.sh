@@ -1,4 +1,10 @@
 #!/bin/bash
+export ANDROID_HOME=/home/alex/Android/Sdk
+export ANDROID_NDK_HOME=$ANDROID_HOME/ndk/25.2.9519653
+
+export PKG_CONFIG_PATH=/home/alex/Документы/android/media/examples/android/libgstreamer_android_gen/gst-android-build/arm64-v8a/lib/pkgconfig
+
+export JAVA_HOME=/opt/android-studio/jbr
 
 # Step 1: Delete all files in the specified directory
 rm -f app/src/main/jniLibs/arm64-v8a/*
