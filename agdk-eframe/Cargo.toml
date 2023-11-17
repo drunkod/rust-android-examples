@@ -30,7 +30,8 @@ gst = { version = "0.21.2", package = "gstreamer", default-features = false }
 log = { version = "0.4.18", default-features = false }
 
 [lib]
-
+path = "src/lib.rs"
+name="agdk_eframe"
 crate_type=["cdylib"]
 
 [package.metadata.android]
