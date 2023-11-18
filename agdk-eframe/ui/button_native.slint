@@ -1,4 +1,4 @@
-import { Switch, Button, LineEdit, VerticalBox } from "std-widgets.slint";
+import { Switch, Button, LineEdit, VerticalBox, ListView } from "std-widgets.slint";
 
 
 export component Recipe inherits Window {
@@ -6,10 +6,15 @@ export component Recipe inherits Window {
     callback button-pressed <=> button.clicked;
     callback switch-pressed <=> switch.toggled;
     in-out property text <=> txt.text;
-    VerticalBox {
-
-        width: 200px;
-        height: 25px;
+    in-out property log <=> log.text;
+    VerticalLayout {
+        width: 300px;
+        height: 50px;
+        log := Text {
+            x: 0px;
+            text: "Status";
+            color: #ff00ff;
+        }
         switch := Switch {
             width: parent.width;
             height: parent.height;
@@ -18,12 +23,27 @@ export component Recipe inherits Window {
         button := Button {
             text: "Button, pressed " + root.counter + " times";
         }
+        rtmp2sink-vk-key := LineEdit {
+            font-size: 14px;
+            width: parent.width;
+            height: parent.height;
+            placeholder-text: "Enter rtmp2sink-vk-key here";
+            text: "6354010123072_5463071132224_ro2atxjhue";
+            }
+        uri := LineEdit {
+            font-size: 14px;
+            width: parent.width;
+            height: parent.height;
+            placeholder-text: "Enter uri here";
+            text: "192.168.6.82:8888";
+            }
         txt := LineEdit {
-        font-size: 14px;
-        width: parent.width;
-        height: parent.height;
-        placeholder-text: "Enter text here";
-        text: "videotestsrc is-live=true ! videoconvert ! x264enc bitrate=1000 tune=zerolatency ! video/x-h264 ! h264parse ! video/x-h264 ! queue ! flvmux name=mux ! rtmp2sink location=rtmps://dc4-1.rtmp.t.me/s/4018499832:im0paW2eEZTVdPI_JN2VaQ audiotestsrc is-live=true ! audioconvert ! audioresample ! audio/x-raw,rate=48000 ! avenc_aac bitrate=96000 ! audio/mpeg ! aacparse ! audio/mpeg, mpegversion=4 ! mux.";
-    }
+            font-size: 14px;
+            width: parent.width;
+            height: parent.height;
+            placeholder-text: "Enter text here";
+            text: "videotestsrc is-live=true ! videoconvert ! x264enc bitrate=1000 tune=zerolatency ! video/x-h264 ! h264parse ! video/x-h264 ! queue ! flvmux name=mux ! rtmp2sink location=rtmp://ovsu.mycdn.me/input/" + rtmp2sink-vk-key.text + " audiotestsrc is-live=true ! audioconvert ! audioresample ! audio/x-raw,rate=48000 ! avenc_aac bitrate=96000 ! audio/mpeg ! aacparse ! audio/mpeg, mpegversion=4 ! mux.";
+            }
+
     }
 }

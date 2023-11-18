@@ -1,7 +1,12 @@
 #!/bin/bash
+# export OPENSSL_DIR=/usr
+export OPENSSL_DIR="/home/alex/Документы/android/rust-android-examples/agdk-eframe/ssl_1.1"
+export AARCH64_LINUX_ANDROID_OPENSSL_LIB_DIR="/home/alex/Документы/android/rust-android-examples/agdk-eframe/ssl_1.1/arm64-v8a"
+
 export ANDROID_HOME=/home/alex/Android/Sdk
 export ANDROID_NDK_HOME=$ANDROID_HOME/ndk/25.2.9519653
 
+export PATH=$PATH:$ANDROID_NDK_HOME/toolchains/llvm/prebuilt/linux-x86_64/bin
 export PKG_CONFIG_PATH=/home/alex/Документы/android/media/examples/android/libgstreamer_android_gen/gst-android-build/arm64-v8a/lib/pkgconfig
 
 export JAVA_HOME=/opt/android-studio/jbr
