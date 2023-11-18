@@ -4,10 +4,6 @@ name: GST Android 64-bit Release
 on:
   push:
   pull_request:
-  
-defaults:
-  run:
-    shell: bash
 
 env:
   GStreamerVersion: 1.22.5
