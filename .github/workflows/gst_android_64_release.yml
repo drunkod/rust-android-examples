@@ -52,8 +52,8 @@ jobs:
           
       - name: Copy libc++_shared.so
         run: |
-           cd ${{ steps.setup-ndk.outputs.ndk-path }}/sources/cxx-stl/llvm-libc++/libs/${{ matrix.abi }}/ && ls
-           cd /gstreamer/libs/${{ matrix.abi }}/ && ls
+           # cd ${{ steps.setup-ndk.outputs.ndk-path }}/sources/cxx-stl/llvm-libc++/libs/${{ matrix.abi }}/ && ls
+           cd /gstreamer/libs/${{ matrix.abi }} && ls
            cp ${{ steps.setup-ndk.outputs.ndk-path }}/sources/cxx-stl/llvm-libc++/libs/${{ matrix.abi }}/libc++_shared.so /gstreamer/libs/${{ matrix.abi }}/
 
       - name: Publish
