@@ -52,7 +52,7 @@ jobs:
           
       - name: Copy libc++_shared.so
         run: |
-           cd gst-android-build && ls
+           cd gstreamer && ls
            cp ${{ steps.setup-ndk.outputs.ndk-path }}/sources/cxx-stl/llvm-libc++/libs/${{ matrix.abi }}/libc++_shared.so gst-android-build/${{ matrix.abi }}/
 
       - name: Publish
