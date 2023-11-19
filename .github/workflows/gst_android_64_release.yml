@@ -60,5 +60,5 @@ jobs:
         with:
           name: AndroidGStreamer
           path: |
-            gst-android-build/libs/${{ matrix.abi }}/libgstreamer_android.so
-            gst-android-build/libs/${{ matrix.abi }}/libc++_shared.so
+            gst-android-build/${{ matrix.abi }}/libgstreamer_android.so
+            gst-android-build/${{ matrix.abi }}/libc++_shared.so
