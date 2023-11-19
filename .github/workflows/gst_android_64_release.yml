@@ -47,7 +47,7 @@ jobs:
           mkdir gstreamer
           cp gstreamer-android/* gstreamer/
           echo "\n\n=== Building GStreamer ${{ env.GStreamerVersion }} for target ${{ matrix.abi }} with ${NDK_APPLICATION_MK} ==="
-          ndk-build -C $(pwd)/gstreamer "NDK_APPLICATION_MK=Android.mk" APP_ABI=${{ matrix.abi }} NDK_LIBS_OUT=$(pwd)
+          ndk-build -C $(pwd)/gstreamer "NDK_APPLICATION_MK=Android.mk" APP_ABI=${{ matrix.abi }} APP_PLATFORM = android-21 NDK_LIBS_OUT=$(pwd)  
           
       - name: Copy libc++_shared.so
         run: |
