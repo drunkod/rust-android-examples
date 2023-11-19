@@ -40,6 +40,7 @@ jobs:
         run: |
           echo "NDK_PROJECT_PATH=${{ steps.setup-ndk.outputs.ndk-path }}"
           export NDK_PROJECT_PATH=${{ steps.setup-ndk.outputs.ndk-path }}
+          export TARGET_ARCH_ABI=${{ matrix.abi }}
           mkdir gstreamer_android
           tar -xf gstreamer-1.0-android-universal-${{ env.GStreamerVersion }}.tar.xz -C $(pwd)/gstreamer_android/
           export GSTREAMER_ROOT_ANDROID=$(pwd)/gstreamer_android
