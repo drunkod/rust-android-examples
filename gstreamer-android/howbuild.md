@@ -1,10 +1,11 @@
-gha
+# gha 
+
 https://github.com/acxz/qgroundcontrol/blob/gst/.github/workflows/android_64_release.yml
 https://github.com/yulin-li/ActionPipelines/tree/master/.github/workflows
-
 https://github.com/Meonardo/GenLibGStreamerAndroid/blob/master/build.sh
 
-Builder on QMAKE
+
+# Builder on QMAKE
 https://github.com/acxz/qgroundcontrol/blob/gst/qgroundcontrol.pro
 
 Docker images with Qt, GStreamer, NDK specifically to build projects on CI
