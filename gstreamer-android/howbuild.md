@@ -7,3 +7,5 @@ https://github.com/Meonardo/GenLibGStreamerAndroid/blob/master/build.sh
 Builder on QMAKE
 https://github.com/acxz/qgroundcontrol/blob/gst/qgroundcontrol.pro
 
+gstreamer-qt-docker with cerbero Builder
+https://github.com/franzos/gstreamer-qt-docker
