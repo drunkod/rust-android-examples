@@ -29,7 +29,7 @@ jobs:
         id: setup-ndk
         uses: nttld/setup-ndk@v1
         with:
-          ndk-version: r25c
+          ndk-version: r21c
           local-cache: true          
 
       - name: Download GStreamer
