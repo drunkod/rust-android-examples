@@ -53,14 +53,14 @@ jobs:
       - name: Copy libc++_shared.so
         run: |
            # cd ${{ steps.setup-ndk.outputs.ndk-path }}/sources/cxx-stl/llvm-libc++/libs/${{ matrix.abi }}/ && ls
-           ls -R
-           cd gstreamer/libs/${{ matrix.abi }} && ls
-           cp ${{ steps.setup-ndk.outputs.ndk-path }}/sources/cxx-stl/llvm-libc++/libs/${{ matrix.abi }}/libc++_shared.so /gstreamer/libs/${{ matrix.abi }}/
+           # ls -R
+           cd ./gstreamer/libs/${{ matrix.abi }} && ls
+           cp ${{ steps.setup-ndk.outputs.ndk-path }}/sources/cxx-stl/llvm-libc++/libs/${{ matrix.abi }}/libc++_shared.so ./gstreamer/libs/${{ matrix.abi }}
 
       - name: Publish
         uses: actions/upload-artifact@v2
         with:
           name: AndroidGStreamer
           path: |
-            gstreamer/libs/${{ matrix.abi }}/libgstreamer_android.so
-            gstreamer/libs/${{ matrix.abi }}/libc++_shared.so
+            ./gstreamer/libs/${{ matrix.abi }}/libgstreamer_android.so
+            ./gstreamer/libs/${{ matrix.abi }}/libc++_shared.so
