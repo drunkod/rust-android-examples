@@ -164,9 +164,9 @@ jobs:
         # a shared target to speed up builds of all examples
         run: mkdir shared-target
         
-      - name: Display structure of downloaded files
-        run: ls -R
-        working-directory: /usr/lib64/pkgconfig 
+      # - name: Display structure of downloaded files
+      #   run: ls -R
+      #   working-directory: /usr/lib64/pkgconfig 
 
       - name: find libunwind.pc
         run: |
