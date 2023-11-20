@@ -165,7 +165,7 @@ jobs:
           
       - name: Display structure of downloaded files
         run: ls -R
-        working-directory: ${{ github.workspace }}/shared-target       
+        working-directory: agdk-eframe/app/build/outputs/apk/debug  
 
       # We don't currently build the OpenXR examples on Android because I
       # haven't found a nice nice way to pull in libopenxr_loader binaries that
