@@ -155,14 +155,19 @@ jobs:
         # Each example is in a separate workspace but we want to use
         # a shared target to speed up builds of all examples
         run: mkdir shared-target
+        
+      - name: Display structure of downloaded files
+        run: ls -R
+        working-directory: /usr/lib64/pkgconfig 
 
       - name: find libunwind.pc
         run: sudo find / -name libunwind.pc      
-
+        # CARGO_TARGET_DIR=$GITHUB_WORKSPACE/shared-target cargo ndk ${{ matrix.cargo_ndk_args }} build &&
+        # PKG_CONFIG_ALLOW_CROSS=1 RUSTFLAGS="-lffi -C link-args=-lunwind" CARGO_TARGET_DIR=$GITHUB_WORKSPACE/shared-target cargo apk build &&
       - name: Build agdk-eframe example
         working-directory: agdk-eframe
         run: >
-          PKG_CONFIG_ALLOW_CROSS=1 RUSTFLAGS="-lffi -C link-args=-lunwind" CARGO_TARGET_DIR=$GITHUB_WORKSPACE/shared-target cargo apk build &&
+          PKG_CONFIG_ALLOW_CROSS=1 RUSTFLAGS="-lffi -C link-args=-lunwind" CARGO_TARGET_DIR=$GITHUB_WORKSPACE/shared-target cargo ndk ${{ matrix.cargo_ndk_args }} build &&
           ./gradlew build &&
           find $GITHUB_WORKSPACE/shared-target -iname '*.so' -exec rm {} \;
           
