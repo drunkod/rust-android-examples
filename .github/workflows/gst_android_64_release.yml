@@ -3,6 +3,8 @@ name: GST Android 64-bit Release
 
 on:
   push:
+    tags:
+    - '*'
   pull_request:
 
 env:
@@ -72,6 +74,6 @@ jobs:
       - name: Release
         uses: ncipollo/release-action@v1
         with:
-          tag: ${{ github.ref }}
+          tag: ${{ github.ref_name }}
           artifacts: "${{ github.workspace }}/artifacts/*.so"
             
