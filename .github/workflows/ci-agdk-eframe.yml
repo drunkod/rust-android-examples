@@ -26,7 +26,7 @@ jobs:
         with:
           rust-version: ${{ matrix.rust_version }}
           
-      - name: Download tar.gz and extract to specific directory
+      - name: Download tar.gz and extract to specific directory 3
         run: |
           wget -O ${{ github.workspace }}/agdk-eframe/app/src/main/jniLibs/arm64-v8a/minimal.tar.gz https://github.com/drunkod/rust-android-examples/archive/refs/tags/minimal.tar.gz
           tar -xzf ${{ github.workspace }}/agdk-eframe/app/src/main/jniLibs/arm64-v8a/minimal.tar.gz -C ${{ github.workspace }}/agdk-eframe/app/src/main/jniLibs/arm64-v8a/          
