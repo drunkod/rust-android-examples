@@ -1,1 +1,23 @@
+name: Custom Docker Run Action
 
+on:
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v2
+
+    - name: Login to DockerHub
+      uses: isbang/compose-action@v1.5.1 
+      with:
+        compose-file: "./docker/docker-compose.yml"
+      env:
+        CUSTOM_VARIABLE: "test"
+
+    - name: run docker
+      run: |
+        docker ps    
