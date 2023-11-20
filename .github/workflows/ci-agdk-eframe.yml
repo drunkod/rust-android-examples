@@ -158,15 +158,27 @@ jobs:
         working-directory: agdk-eframe
         run: >
           #  add rustflags = ["-C", "link-args=-lunwind"]
-          CARGO_TARGET_DIR=$GITHUB_WORKSPACE/shared-target cargo ndk ${{ matrix.cargo_ndk_args }} build &&
-          # PKG_CONFIG_ALLOW_CROSS=1 RUSTFLAGS="-lffi -C link-args=-lunwind" CARGO_TARGET_DIR=$GITHUB_WORKSPACE/shared-target cargo apk build &&
+          # CARGO_TARGET_DIR=$GITHUB_WORKSPACE/shared-target cargo ndk ${{ matrix.cargo_ndk_args }} build &&
+          PKG_CONFIG_ALLOW_CROSS=1 RUSTFLAGS="-lffi -C link-args=-lunwind" CARGO_TARGET_DIR=$GITHUB_WORKSPACE/shared-target cargo apk build &&
           ./gradlew build &&
           find $GITHUB_WORKSPACE/shared-target -iname '*.so' -exec rm {} \;
           
       - name: Display structure of downloaded files
         run: ls -R
-        working-directory: agdk-eframe/app  
-
+        working-directory: agdk-eframe/app
+      - name: Display structure of downloaded files
+        run: ls -R
+        working-directory: agdk-eframe 
+         
+      - name: Display structure of downloaded files
+        run: ls
+        working-directory: ${{ github.workspace }}/shared-target
+        
+      - name: Display structure of downloaded files
+        run: ls
+        working-directory: ${{ github.workspace }}
+        
+        
       # We don't currently build the OpenXR examples on Android because I
       # haven't found a nice nice way to pull in libopenxr_loader binaries that
       # we can link against. Normally I would use the binaries as part of the
