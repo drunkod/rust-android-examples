@@ -54,7 +54,7 @@ jobs:
 
     - name: git clone cerbero
       run: |
-        sudo mkdir -r /vendor/cerbero
+        sudo mkdir -p /vendor/cerbero
         git clone https://gitlab.freedesktop.org/gstreamer/cerbero.git /vendor/cerbero && \
         cd /vendor/cerbero && git checkout 1.22.5 && \
         ./cerbero-uninstalled -c config/cross-android-universal.cbc fetch-bootstrap && \
