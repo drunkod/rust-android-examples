@@ -158,7 +158,8 @@ jobs:
       - name: Build agdk-eframe example
         working-directory: agdk-eframe
         run: >
-          PKG_CONFIG_ALLOW_CROSS=1 RUSTFLAGS="-lffi" CARGO_TARGET_DIR=$GITHUB_WORKSPACE/shared-target cargo apk build &&
+          #  add rustflags = ["-C", "link-args=-lunwind"]
+          PKG_CONFIG_ALLOW_CROSS=1 RUSTFLAGS="-lffi -C link-args=-lunwind" CARGO_TARGET_DIR=$GITHUB_WORKSPACE/shared-target cargo apk build &&
           ./gradlew build &&
           find $GITHUB_WORKSPACE/shared-target -iname '*.so' -exec rm {} \;
 
