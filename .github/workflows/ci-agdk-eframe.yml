@@ -165,7 +165,7 @@ jobs:
         run: mkdir shared-target
         
       - name: echo $ANDROID_NDK_HOME
-        run: echo $ANDROID_NDK_HOME && $ANDROID_HOME
+        run: echo $ANDROID_NDK_HOME && echo $ANDROID_HOME
 
       - name: find libunwind.pc
         run: |
