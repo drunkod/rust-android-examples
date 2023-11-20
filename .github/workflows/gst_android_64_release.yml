@@ -56,14 +56,16 @@ jobs:
            # ls -R
            # cd ./gstreamer/libs/${{ matrix.abi }} && ls
            cp ${{ steps.setup-ndk.outputs.ndk-path }}/sources/cxx-stl/llvm-libc++/libs/${{ matrix.abi }}/libc++_shared.so ./gstreamer/libs/${{ matrix.abi }}
+           mkdir -p ${{ github.workspace }}/artifacts
+           cp -r ./gstreamer/libs/${{ matrix.abi }} ${{ github.workspace }}/artifacts
 
       - name: Publish
         uses: actions/upload-artifact@v2
         with:
           name: AndroidGStreamer
           path: |
-            ./gstreamer/libs/${{ matrix.abi }}/libgstreamer_android.so
-            ./gstreamer/libs/${{ matrix.abi }}/libc++_shared.so
+            ${{ github.workspace }}/artifacts/libgstreamer_android.so
+            ${{ github.workspace }}/artifacts/libc++_shared.so
             
       - name: Create Release
         id: create_release
@@ -83,7 +85,7 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           upload_url: ${{ steps.create_release.outputs.upload_url }} 
-          asset_path: ./gstreamer/libs/${{ matrix.abi }}/libgstreamer_android.so
+          asset_path: ${{ github.workspace }}/artifacts/libgstreamer_android.so
           asset_name: libgstreamer_android.so
           asset_content_type: application/octet-stream
       
@@ -94,7 +96,7 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           upload_url: ${{ steps.create_release.outputs.upload_url }} 
-          asset_path: ./gstreamer/libs/${{ matrix.abi }}/libc++_shared.so
+          asset_path: ${{ github.workspace }}/artifacts/libc++_shared.so
           asset_name: libc++_shared.so
           asset_content_type: application/octet-stream       
             
