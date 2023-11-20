@@ -55,9 +55,9 @@ jobs:
            # cd ${{ steps.setup-ndk.outputs.ndk-path }}/sources/cxx-stl/llvm-libc++/libs/${{ matrix.abi }}/ && ls
            # ls -R
            # cd ./gstreamer/libs/${{ matrix.abi }} && ls
-           cp ${{ steps.setup-ndk.outputs.ndk-path }}/sources/cxx-stl/llvm-libc++/libs/${{ matrix.abi }}/libc++_shared.so ./gstreamer/libs/${{ matrix.abi }}
            mkdir -p ${{ github.workspace }}/artifacts
-           cp -r ./gstreamer/libs/${{ matrix.abi }} ${{ github.workspace }}/artifacts
+           cp ${{ steps.setup-ndk.outputs.ndk-path }}/sources/cxx-stl/llvm-libc++/libs/${{ matrix.abi }}/libc++_shared.so ${{ github.workspace }}/artifacts
+           cp ./gstreamer/libs/${{ matrix.abi }}/libgstreamer_android.so ${{ github.workspace }}/artifacts
 
       - name: Publish
         uses: actions/upload-artifact@v2
