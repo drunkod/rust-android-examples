@@ -1,4 +1,4 @@
-name: Custom Docker Run Action
+name: Custom_Docker_Run_Action
 
 on:
   workflow_dispatch:
