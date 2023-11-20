@@ -64,3 +64,37 @@ jobs:
           path: |
             ./gstreamer/libs/${{ matrix.abi }}/libgstreamer_android.so
             ./gstreamer/libs/${{ matrix.abi }}/libc++_shared.so
+            
+      - name: Create Release
+        id: create_release
+        uses: actions/create-release@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }} # GitHub предоставляет этот токен автоматически
+        with:
+          tag_name: ${{ github.ref }}
+          release_name: Release ${{ github.ref }}
+          draft: false
+          prerelease: false
+      
+      - name: Upload libgstreamer_android.so to Release
+        id: upload-release-asset-libgstreamer 
+        uses: actions/upload-release-asset@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          upload_url: ${{ steps.create_release.outputs.upload_url }} 
+          asset_path: ./gstreamer/libs/${{ matrix.abi }}/libgstreamer_android.so
+          asset_name: libgstreamer_android.so
+          asset_content_type: application/octet-stream
+      
+      - name: Upload libc++_shared.so to Release
+        id: upload-release-asset-libc 
+        uses: actions/upload-release-asset@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          upload_url: ${{ steps.create_release.outputs.upload_url }} 
+          asset_path: ./gstreamer/libs/${{ matrix.abi }}/libc++_shared.so
+          asset_name: libc++_shared.so
+          asset_content_type: application/octet-stream       
+            
