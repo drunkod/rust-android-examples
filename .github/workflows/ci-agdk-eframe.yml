@@ -146,6 +146,9 @@ jobs:
 
       - name: Install cargo-apk
         run: cargo install cargo-apk
+        
+      - name: Install cargo-ndk
+        run: cargo install cargo-ndk  
 
       - name: Install gtk3-dev
         run: sudo apt-get install libgtk-3-dev
