@@ -49,6 +49,7 @@ jobs:
           libcap-dev libpulse-dev libudev-dev libpci-dev libnss3-dev libasound2-dev
           echo " SSSSSSSSStep 50 "
           # libunwind-dev fix
+          cat /etc/apt/sources.list
           sudo apt-get -y install libunwind-15-dev \
           sudo apt-get -y install libasound2-dev libgstreamer1.0-dev libgstreamer-plugins-base1.0-dev libgstreamer-plugins-good1.0-dev libgstreamer-plugins-bad1.0-dev \
           libcups2-dev libavformat58 libavcodec58 libavutil56 libswresample3 libswscale5 libavdevice58 \
