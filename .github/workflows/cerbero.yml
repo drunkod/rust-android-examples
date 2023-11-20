@@ -60,3 +60,12 @@ jobs:
         ./cerbero-uninstalled -c config/cross-android-universal.cbc fetch-package gstreamer-1.0
       working-directory: ${{ github.workspace }}
 
+    - name: package gstreamer-1.0
+      run: |
+        ./cerbero-uninstalled -c config/cross-android-universal.cbc bootstrap --offline && \
+        ./cerbero-uninstalled -c config/cross-android-universal.cbc package gstreamer-1.0
+      working-directory: vendor/cerbero
+
+    - name: Display vendor/cerbero structure of downloaded files
+      run: ls -R
+      working-directory: vendor/cerbero       
