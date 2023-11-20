@@ -54,9 +54,9 @@ jobs:
 
     - name: git clone cerbero
       run: |
-        mkdir -p /vendor/cerbero
-        git clone https://gitlab.freedesktop.org/gstreamer/cerbero.git /vendor/cerbero && \
-        cd /vendor/cerbero && git checkout 1.22.5 && \
+        mkdir -p ${{ github.workspace }}/vendor/cerbero
+        git clone https://gitlab.freedesktop.org/gstreamer/cerbero.git ${{ github.workspace }}/vendor/cerbero && \
+        cd ${{ github.workspace }}/vendor/cerbero && git checkout 1.22.5 && \
         ./cerbero-uninstalled -c config/cross-android-universal.cbc fetch-bootstrap && \
         ./cerbero-uninstalled -c config/cross-android-universal.cbc fetch-package gstreamer-1.0
       working-directory: ${{ github.workspace }}
@@ -65,8 +65,8 @@ jobs:
       run: |
         ./cerbero-uninstalled -c config/cross-android-universal.cbc bootstrap --offline && \
         ./cerbero-uninstalled -c config/cross-android-universal.cbc package gstreamer-1.0
-      working-directory: vendor/cerbero
+      working-directory: ${{ github.workspace }}/vendor/cerbero
 
     - name: Display vendor/cerbero structure of downloaded files
       run: ls -R
-      working-directory: vendor/cerbero       
+      working-directory: ${{ github.workspace }}/vendor/cerbero       
