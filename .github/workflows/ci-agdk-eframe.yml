@@ -88,7 +88,12 @@ jobs:
           echo " SSSSSSSSStep 50 "
           # libunwind-dev fix libunwind-14-dev libunwind-dev
           sudo apt-get -y install libunwind-15-dev
-          sudo apt-get -y install libasound2-dev libgstreamer1.0-dev libgstreamer-plugins-base1.0-dev libgstreamer-plugins-good1.0-dev libgstreamer-plugins-bad1.0-dev \
+          sudo apt-get -y install libasound2-dev libgstreamer1.0-dev libgstreamer-plugins-base1.0-dev 
+          libgstreamer-plugins-good1.0-dev libgstreamer-plugins-bad1.0-dev
+          sudo apt-get -y install llibgstreamer1.0-dev libgstreamer-plugins-base1.0-dev \
+          gstreamer1.0-plugins-base gstreamer1.0-plugins-good \
+          gstreamer1.0-plugins-bad gstreamer1.0-plugins-ugly \
+          gstreamer1.0-libav libgstrtspserver-1.0-dev libges-1.0-dev \
           libcups2-dev libavformat58 libavcodec58 libavutil56 libswresample3 libswscale5 libavdevice58 \
           libmng2 libwebp7 libxcb-xinput0 libwebpmux3 libvpx7 libzstd1 libpcre2-16-0 libxshmfence1 libclang1
           sudo apt-get install -y \
@@ -154,6 +159,10 @@ jobs:
         # a shared target to speed up builds of all examples
         run: mkdir shared-target
 
+      - name: find libunwind.pc
+        run: sudo find / -name libunwind.pc
+        working-directory: agdk-eframe/app        
+
       - name: Build agdk-eframe example
         working-directory: agdk-eframe
         run: >
@@ -161,6 +170,8 @@ jobs:
           ./gradlew build &&
           find $GITHUB_WORKSPACE/shared-target -iname '*.so' -exec rm {} \;
           
+
+        
       - name: Display structure of downloaded files
         run: ls -R
         working-directory: agdk-eframe/app
