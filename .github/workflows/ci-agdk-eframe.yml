@@ -85,14 +85,12 @@ jobs:
           sudo apt-get -y install libxcursor-dev libxcomposite-dev libxdamage-dev libxrandr-dev \
           libxtst-dev libxss-dev libdbus-1-dev libevent-dev libfontconfig1-dev \
           libcap-dev libpulse-dev libudev-dev libpci-dev libnss3-dev libasound2-dev
-          echo " SSSSSSSSStep 50 "
+          echo " SSSSSSSSStep 88 "
           # libunwind-dev fix libunwind-14-dev libunwind-dev
           sudo apt-get -y install libunwind-15-dev
-          sudo apt-get -y install libasound2-dev libgstreamer1.0-dev libgstreamer-plugins-base1.0-dev \ 
-          libgstreamer-plugins-good1.0-dev libgstreamer-plugins-bad1.0-dev
-          sudo apt-get -y install gstreamer1.0-plugins-base gstreamer1.0-plugins-good \
-          gstreamer1.0-plugins-bad gstreamer1.0-plugins-ugly \
-          gstreamer1.0-libav libgstrtspserver-1.0-dev libges-1.0-dev \
+          sudo apt-get -y install libasound2-dev libgstreamer1.0-dev libgstreamer-plugins-base1.0-dev libgstreamer-plugins-good1.0-dev libgstreamer-plugins-bad1.0-dev
+          echo " SSSSSSSSStep 92 "
+          sudo apt-get -y install libges-1.0-dev \
           libcups2-dev libavformat58 libavcodec58 libavutil56 libswresample3 libswscale5 libavdevice58 \
           libmng2 libwebp7 libxcb-xinput0 libwebpmux3 libvpx7 libzstd1 libpcre2-16-0 libxshmfence1 libclang1
           sudo apt-get install -y \
