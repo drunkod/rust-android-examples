@@ -22,14 +22,14 @@ jobs:
       - name: Create directories
         run: mkdir -p ${{ github.workspace }}/agdk-eframe/app/src/main/jniLibs/arm64-v8a/
 
-      - uses: actions/download-artifact@v3
-        with:
-          name: my-artifact
-          path: ${{ github.workspace }}/gstreamer-android/
+      # - uses: actions/download-artifact@v3
+      #   with:
+      #     name: my-artifact
+      #     path: ${{ github.workspace }}/gstreamer-android/
           
-      - name: Display structure of downloaded files
-        run: ls -R
-        working-directory: ${{ github.workspace }}/gstreamer-android/          
+      # - name: Display structure of downloaded files
+      #   run: ls -R
+      #   working-directory: ${{ github.workspace }}/gstreamer-android/          
 
       - uses: hecrj/setup-rust-action@v1
         with:
