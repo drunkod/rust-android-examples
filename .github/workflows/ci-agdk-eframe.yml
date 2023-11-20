@@ -5,6 +5,7 @@ on:
   pull_request:
 
 env:
+  GStreamerVersion: 1.22.5
   CARGO_INCREMENTAL: 0
 jobs:
   build:
@@ -33,6 +34,13 @@ jobs:
       - uses: hecrj/setup-rust-action@v1
         with:
           rust-version: ${{ matrix.rust_version }}
+
+      - name: Extract gstreamer
+        working-directory:  ${{ github.workspace }}
+        run: |
+            wget https://gstreamer.freedesktop.org/data/pkg/android/${{ env.GStreamerVersion }}/gstreamer-1.0-android-universal-${{ env.GStreamerVersion }}.tar.xz
+            mkdir gstreamer-1.0-android-universal-${{ env.GStreamerVersion }}
+            tar xf gstreamer-1.0-android-universal-${{ env.GStreamerVersion }}.tar.xz -C gstreamer-1.0-android-universal-${{ env.GStreamerVersion }}  
           
       - name: Download *.so
         run: |
@@ -161,13 +169,15 @@ jobs:
         working-directory: /usr/lib64/pkgconfig 
 
       - name: find libunwind.pc
-        run: sudo find / -name libunwind.pc      
+        run: |
+          sudo find / -name *unwind*    
         # CARGO_TARGET_DIR=$GITHUB_WORKSPACE/shared-target cargo ndk ${{ matrix.cargo_ndk_args }} build &&
         # PKG_CONFIG_ALLOW_CROSS=1 RUSTFLAGS="-lffi -C link-args=-lunwind" CARGO_TARGET_DIR=$GITHUB_WORKSPACE/shared-target cargo apk build &&
       - name: Build agdk-eframe example
         working-directory: agdk-eframe
         run: >
-          PKG_CONFIG_ALLOW_CROSS=1 RUSTFLAGS="-lffi -C link-args=-lunwind" CARGO_TARGET_DIR=$GITHUB_WORKSPACE/shared-target cargo ndk ${{ matrix.cargo_ndk_args }} build &&
+          PKG_CONFIG_PATH=gstreamer-1.0-android-universal-${{ env.GStreamerVersion }}/arm64/lib/pkgconfig \
+          PKG_CONFIG_ALLOW_CROSS=1 RUSTFLAGS="-lffi" CARGO_TARGET_DIR=$GITHUB_WORKSPACE/shared-target cargo ndk ${{ matrix.cargo_ndk_args }} build &&
           ./gradlew build &&
           find $GITHUB_WORKSPACE/shared-target -iname '*.so' -exec rm {} \;
           
