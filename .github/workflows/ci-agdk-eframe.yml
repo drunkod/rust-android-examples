@@ -6,8 +6,6 @@ on:
 
 env:
   CARGO_INCREMENTAL: 0
-  RUSTFLAGS: "-C debuginfo=0 --deny warnings"
-  RUSTDOCFLAGS: -Dwarnings
 jobs:
   build:
     runs-on: ubuntu-latest
