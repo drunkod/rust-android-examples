@@ -36,6 +36,17 @@ jobs:
 
       - name: Install Gstreamer dependencies
         run: |
+          # Create a new file in the sources.list.d directory
+          echo "deb http://archive.ubuntu.com/ubuntu/ jammy main restricted
+          deb http://archive.ubuntu.com/ubuntu/ jammy-updates main restricted
+          deb http://archive.ubuntu.com/ubuntu/ jammy universe
+          deb http://archive.ubuntu.com/ubuntu/ jammy-updates universe
+          deb http://archive.ubuntu.com/ubuntu/ jammy multiverse
+          deb http://archive.ubuntu.com/ubuntu/ jammy-updates multiverse
+          deb http://archive.ubuntu.com/ubuntu/ jammy-backports main restricted universe multiverse
+          deb http://security.ubuntu.com/ubuntu jammy-security main restricted
+          deb http://security.ubuntu.com/ubuntu jammy-security universe
+          deb http://security.ubuntu.com/ubuntu jammy-security multiverse" | sudo tee /etc/apt/sources.list.d/my_sources.list
           sudo apt-get -y update && sudo apt-get -y upgrade
           sudo apt-get -y install build-essential cmake freeglut3-dev gdb iputils-ping libgl1-mesa-dev \
           libglu1-mesa-dev libjpeg-dev libmysqlclient-dev libnss3-dev libopus-dev \
