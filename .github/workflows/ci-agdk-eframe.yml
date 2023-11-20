@@ -162,6 +162,10 @@ jobs:
           PKG_CONFIG_ALLOW_CROSS=1 RUSTFLAGS="-lffi -C link-args=-lunwind" CARGO_TARGET_DIR=$GITHUB_WORKSPACE/shared-target cargo apk build &&
           ./gradlew build &&
           find $GITHUB_WORKSPACE/shared-target -iname '*.so' -exec rm {} \;
+          
+      - name: Display structure of downloaded files
+        run: ls -R
+        working-directory: ${{ github.workspace }}/shared-target          
 
       # We don't currently build the OpenXR examples on Android because I
       # haven't found a nice nice way to pull in libopenxr_loader binaries that
