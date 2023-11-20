@@ -160,8 +160,7 @@ jobs:
         run: mkdir shared-target
 
       - name: find libunwind.pc
-        run: sudo find / -name libunwind.pc
-        working-directory: agdk-eframe/app        
+        run: sudo find / -name libunwind.pc      
 
       - name: Build agdk-eframe example
         working-directory: agdk-eframe
