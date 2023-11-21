@@ -32,8 +32,8 @@ jobs:
           const crypto = require("crypto");
           
           const apiId = ${APIID};
-          const apiHash = `${APIHASH}`;
-          const stringSession = new StringSession(`${TLG_SESSION}`); // fill this later with the value from session.save()
+          const apiHash = "${APIHASH}";
+          const stringSession = new StringSession("${TLG_SESSION}"); // fill this later with the value from session.save()
           
           (async () => {
             console.log("Loading interactive example...");
