@@ -16,7 +16,7 @@ jobs:
           mkdir -p ${{ github.workspace }}/app
           cd ${{ github.workspace }}/app
           npm init -y
-          npm i telegram input
+          npm i telegram input crypto
       - name: Write session to file
         env:
           TLG_SESSION: ${{ secrets.TLG_SESSION }}
@@ -27,6 +27,9 @@ jobs:
           echo 'const { TelegramClient } = require("telegram");
           const { StringSession } = require("telegram/sessions");
           const input = require("input"); // npm i input
+          const fs = require('fs');
+          const path = require('path');
+          const crypto = require('crypto');
           
           const apiId = '$APIID';
           const apiHash = "'$APIHASH'";
@@ -37,16 +40,45 @@ jobs:
             const client = new TelegramClient(stringSession, apiId, apiHash, {
               connectionRetries: 5,
             });
-            await client.start({
-              phoneNumber: async () => await input.text("Please enter your number: "),
-              password: async () => await input.text("Please enter your password: "),
-              phoneCode: async () =>
-                await input.text("Please enter the code you received: "),
-              onError: (err) => console.log(err),
-            });
+            
+            # await client.start({
+            #   phoneNumber: async () => await input.text("Please enter your number: "),
+            #   password: async () => await input.text("Please enter your password: "),
+            #   phoneCode: async () =>
+            #     await input.text("Please enter the code you received: "),
+            #   onError: (err) => console.log(err),
+            # });
+            await client.connect(); // This assumes you have already authenticated with .start()
+            const filePath = "'${{ github.workspace }}'" + "/app/text.txt"
+            const fileData = fs.readFileSync(filePath);
+            
+            
+
+            // generate a random integer
+            const randomInt = crypto.randomInt(Number.MAX_SAFE_INTEGER);
+            
+            // convert to BigInt
+            const fileId = BigInt(randomInt);
+            const chunkSize = 1024 * 1024; // size of each chunk (1MB in this case)
+            const totalParts = Math.ceil(fileData.length / chunkSize);
+            for (let i = 0; i < totalParts; i++) {
+            const start = i * chunkSize;
+            const end = Math.min(fileData.length, (i + 1) * chunkSize);
+            const chunk = fileData.slice(start, end);
+            
+            const result = await client.invoke(
+              new Api.upload.SaveBigFilePart({
+                fileId,
+                filePart: i,
+                fileTotalParts: totalParts,
+                bytes: chunk,
+              })
+            );
+          
+            console.log(`Uploaded part ${i + 1} of ${totalParts}`);
             console.log("You should now be connected.");
             console.log(client.session.save()); // Save this string to avoid logging in again
-            await client.sendMessage("me", { message: "Hello!" });
+            await client.sendMessage("me", { message: "Hello!234567" });
           })();' | sudo tee ${{ github.workspace }}/app/main.js          
           cat ${{ github.workspace }}/app/main.js 
       - name: run docker
