@@ -11,15 +11,13 @@ jobs:
       - uses: actions/setup-node@v3
         with:
           node-version: '14'
-      - run: npm help
+      - run: mkdir -p /app && cd /app && npm init -y && npm i telegram
       - name: Write session to file
         env:
           TLG_SESSION: ${{ secrets.TLG_SESSION }}
           APIHASH: ${{ secrets.APIHASH }}
           APIID: ${{ secrets.APIID }}
         run: |
-          npm i telegram
-          mkdir -p /app
           # Create a new file in the sources.list.d directory
           echo "const { TelegramClient } = require("telegram");
           const { StringSession } = require("telegram/sessions");
