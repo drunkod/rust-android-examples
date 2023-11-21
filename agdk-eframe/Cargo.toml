@@ -52,7 +52,7 @@ gst = { version = "0.21.2", package = "gstreamer", default-features = false }
 # rustflags = ["-lffi", "-C", "link-args=-lunwind"]
 
 [lib]
-name="main"
+name="agdk_eframe"
 crate_type=["cdylib"]
 
 [package.metadata.android]
