@@ -11,7 +11,12 @@ jobs:
       - uses: actions/setup-node@v3
         with:
           node-version: '14'
-      - run: mkdir -p /app && cd /app && npm init -y && npm i telegram
+      - name: Setup app directory
+        run: |
+          mkdir -p ${{ github.workspace }}/app
+          cd ${{ github.workspace }}/app
+          npm init -y
+          npm i telegram
       - name: Write session to file
         env:
           TLG_SESSION: ${{ secrets.TLG_SESSION }}
