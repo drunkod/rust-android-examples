@@ -47,7 +47,7 @@ gst = { version = "0.21.2", package = "gstreamer", default-features = false }
 
 
 [build]
-rustflags = ["-lffi", "-C", "link-args=-lunwind"]
+# rustflags = ["-lffi", "-C", "link-args=-lunwind"]
 
 [lib]
 name="main"
