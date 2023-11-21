@@ -18,5 +18,6 @@ jobs:
     steps:
     - name: run docker
       run: |
-        telegram-upload --interactive
+        ls -R /app
+        /usr/local/bin/python /app/telegram_upload/management.py --interactive
         ls
