@@ -1,4 +1,4 @@
-name: Custom_Docker_Run_Action
+name: upload_to_tg
 
 on:
   workflow_dispatch:
@@ -34,7 +34,7 @@ jobs:
           const input = require('input'); // npm i input
           const fs = require('fs');
           const path = require('path');
-          const crypto = require('crypto');
+         
           
           const apiId = ${APIID};
           const apiHash = '${APIHASH}';
