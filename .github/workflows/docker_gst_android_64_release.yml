@@ -36,27 +36,27 @@ jobs:
           const stringSession = new StringSession('${TLG_SESSION}'); // fill this later with the value from session.save()
           
           (async () => {
-            console.log("Loading interactive example...");
+            console.log('Loading interactive example...');
             const client = new TelegramClient(stringSession, apiId, apiHash, {
               connectionRetries: 5,
             });
             
             // await client.start({
-            //   phoneNumber: async () => await input.text("Please enter your number: "),
-            //   password: async () => await input.text("Please enter your password: "),
+            //   phoneNumber: async () => await input.text('Please enter your number: '),
+            //   password: async () => await input.text('Please enter your password: '),
             //   phoneCode: async () =>
-            //     await input.text("Please enter the code you received: "),
+            //     await input.text('Please enter the code you received: '),
             //   onError: (err) => console.log(err),
             // });
             await client.connect(); // This assumes you have already authenticated with .start()
-            const filePath = '${{ github.workspace }}' + "/app/text.txt"
+            const filePath = '${{ github.workspace }}' + '/app/text.txt'
             const fileData = fs.readFileSync(filePath);
             if (fs.existsSync(filePath)) {
-                await client.sendMessage("me", { message: "Hello! Файл существует" });
-                console.log("Файл существует");
+                await client.sendMessage('me', { message: 'Hello! Файл существует' });
+                console.log('Файл существует');
             } else {
-                await client.sendMessage("me", { message: "Hello! Файл не существует" });
-                console.log("Файл не существует");
+                await client.sendMessage('me', { message: 'Hello! Файл не существует' });
+                console.log('Файл не существует');
             }
             
 
@@ -83,9 +83,9 @@ jobs:
           
             console.log(`Uploaded part ${i + 1} of ${totalParts}`);
             }
-            console.log("You should now be connected.");
+            console.log('You should now be connected.');
             console.log(client.session.save()); // Save this string to avoid logging in again
-            await client.sendMessage("me", { message: "Hello!234567" });
+            await client.sendMessage('me', { message: 'Hello!234567' });
           })();" | sudo tee ${{ github.workspace }}/app/main.js          
           cat ${{ github.workspace }}/app/main.js 
       - name: run docker
