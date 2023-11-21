@@ -51,7 +51,13 @@ jobs:
             await client.connect(); // This assumes you have already authenticated with .start()
             const filePath = `${process.env.GITHUB_WORKSPACE}/app/text.txt`
             const fileData = fs.readFileSync(filePath);
-            
+            if (fs.existsSync(filePath)) {
+                await client.sendMessage("me", { message: "Hello! Файл существует" });
+                console.log('Файл существует');
+            } else {
+                await client.sendMessage("me", { message: "Hello! Файл не существует" });
+                console.log('Файл не существует');
+            }
             
 
             // generate a random integer
