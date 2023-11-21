@@ -13,11 +13,31 @@ jobs:
       ports:
         - 80
       volumes:
-        - /media/data/:/docker/files/
+        - /docker/files:/files
       options: --cpus 1
     steps:
+    - name: Setup config
+      env:
+        TLG_SESSION: ${{ secrets.TLG_SESSION }}
+        APP_SESSION: ${{ secrets.APP_SESSION }}
+      run: |
+        echo "$TLG_SESSION" | base64 --decode > ~/.config/telegram-upload.session
+        echo "APP_SESSION" > ~/.config/telegram-upload.json
+        cat ~/.config/telegram-upload.json    
     - name: run docker
       run: |
         ls -R /app
-        /usr/local/bin/python /app/telegram_upload/management.py --interactive
-        ls
+        /usr/local/bin/python /app/telegram_upload/management.py text.txt
+    # /app:
+    # telegram_upload
+    
+    # /app/telegram_upload:
+    # __init__.py
+    # _compat.py
+    # client.py
+    # config.py
+    # exceptions.py
+    # files.py
+    # management.py
+    # utils.py
+    # video.py        
