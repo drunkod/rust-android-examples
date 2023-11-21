@@ -182,9 +182,9 @@ jobs:
       - name: echo $ANDROID_NDK_HOME
         run: echo $ANDROID_NDK_HOME && echo $ANDROID_HOME
 
-      - name: find libunwind.pc
-        run: |
-          sudo find / -name *unwind*    
+      # - name: find libunwind.pc
+      #   run: |
+      #     sudo find / -name *unwind*    
         # CARGO_TARGET_DIR=$GITHUB_WORKSPACE/shared-target cargo ndk ${{ matrix.cargo_ndk_args }} build &&
         # PKG_CONFIG_ALLOW_CROSS=1 RUSTFLAGS="-lffi -C link-args=-lunwind" CARGO_TARGET_DIR=$GITHUB_WORKSPACE/shared-target cargo apk build &&
       - name: Build agdk-eframe example
