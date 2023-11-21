@@ -2,7 +2,7 @@ version: '3.6'
 
 services:
   builder:
-    image: franzos/gstreamer-qt:5.15.8-lts-lgpl-gst-1.22.5-android-latest
+    image: nekmo/telegram-upload:master
     command: tail -f /dev/null
     environment:
       - QT_GRAPHICSSYSTEM=native
