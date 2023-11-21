@@ -6,30 +6,50 @@ on:
 jobs:
   build:
     runs-on: ubuntu-latest
-    container:
-      image: nekmo/telegram-upload:master
-      env:
-        NODE_ENV: development
-      ports:
-        - 80
-      volumes:
-        - ${{ github.workspace }}/docker/files:/files
-      options: --cpus 1
     steps:
-    - name: Write session to file
-      env:
-        TLG_SESSION: ${{ secrets.TLG_SESSION }}
-        APP_SESSION: ${{ secrets.APP_SESSION }}
-        TELEGRAM_UPLOAD_CONFIG_DIRECTORY: /root/.config
-      run: |
-        mkdir -p /root/.config
-        echo "$TLG_SESSION" | base64 --decode > /root/.config/telegram-upload.session
-        echo "$APP_SESSION" > /root/.config/telegram-upload.json
-        cat /root/.config/telegram-upload.json
-        ls -R /files
-    - name: run docker
-      run: |
-        /usr/local/bin/python /app/telegram_upload/management.py upload text.txt
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v3
+        with:
+          node-version: '14'
+      - run: npm help
+      - name: Write session to file
+        env:
+          TLG_SESSION: ${{ secrets.TLG_SESSION }}
+          APIHASH: ${{ secrets.APIHASH }}
+          APIID: ${{ secrets.APIID }}
+        run: |
+          mkdir -p /app
+          # Create a new file in the sources.list.d directory
+          echo "const { TelegramClient } = require("telegram");
+          const { StringSession } = require("telegram/sessions");
+          const input = require("input"); // npm i input
+          
+          const apiId = $APIID;
+          const apiHash = "$APIHASH";
+          const stringSession = new StringSession("$APP_SESSION"); // fill this later with the value from session.save()
+          
+          (async () => {
+            console.log("Loading interactive example...");
+            const client = new TelegramClient(stringSession, apiId, apiHash, {
+              connectionRetries: 5,
+            });
+            await client.start({
+              phoneNumber: async () => await input.text("Please enter your number: "),
+              password: async () => await input.text("Please enter your password: "),
+              phoneCode: async () =>
+                await input.text("Please enter the code you received: "),
+              onError: (err) => console.log(err),
+            });
+            console.log("You should now be connected.");
+            console.log(client.session.save()); // Save this string to avoid logging in again
+            await client.sendMessage("me", { message: "Hello!" });
+          })();" | sudo tee /app/main.js          
+          echo "$TLG_SESSION" | base64 --decode > /root/.config/telegram-upload.session
+          echo "$APP_SESSION" > /root/.config/telegram-upload.json
+          cat /root/.config/telegram-upload.session
+      - name: run docker
+        run: |
+          /usr/local/bin/python /app/telegram_upload/management.py upload text.txt
     # /app:
     # telegram_upload
     
