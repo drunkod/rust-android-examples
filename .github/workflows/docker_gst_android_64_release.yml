@@ -23,7 +23,7 @@ jobs:
         TELEGRAM_UPLOAD_CONFIG_DIRECTORY: /root/.config
       run: |
         mkdir -p /root/.config
-        echo "$TLG_SESSION" | base64 --decode > /root/.config/telegram-upload
+        echo "$TLG_SESSION" | base64 --decode > /root/.config/telegram-upload.session
         echo "$APP_SESSION" > /root/.config/telegram-upload.json
         cat /root/.config/telegram-upload.json
         ls -R /files
