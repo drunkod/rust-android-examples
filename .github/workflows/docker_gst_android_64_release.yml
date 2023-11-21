@@ -53,10 +53,10 @@ jobs:
             const fileData = fs.readFileSync(filePath);
             if (fs.existsSync(filePath)) {
                 await client.sendMessage("me", { message: "Hello! Файл существует" });
-                console.log('Файл существует');
+                console.log("Файл существует");
             } else {
                 await client.sendMessage("me", { message: "Hello! Файл не существует" });
-                console.log('Файл не существует');
+                console.log("Файл не существует");
             }
             
 
