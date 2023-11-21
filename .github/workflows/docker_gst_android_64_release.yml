@@ -16,11 +16,12 @@ jobs:
         - /docker/files:/files
       options: --cpus 1
     steps:
-    - name: Setup config
+    - name: Write session to file
       env:
         TLG_SESSION: ${{ secrets.TLG_SESSION }}
         APP_SESSION: ${{ secrets.APP_SESSION }}
       run: |
+        mkdir -p ~/.config/
         echo "$TLG_SESSION" | base64 --decode > ~/.config/telegram-upload.session
         echo "APP_SESSION" > ~/.config/telegram-upload.json
         cat ~/.config/telegram-upload.json    
