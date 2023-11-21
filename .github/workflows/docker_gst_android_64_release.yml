@@ -24,12 +24,12 @@ jobs:
           APIID: ${{ secrets.APIID }}
         run: |
           # Create a new file in the sources.list.d directory
-          echo "const { TelegramClient } = require("telegram");
-          const { StringSession } = require("telegram/sessions");
-          const input = require("input"); // npm i input
-          const fs = require("fs");
-          const path = require("path");
-          const crypto = require("crypto");
+          echo "const { TelegramClient } = require('telegram');
+          const { StringSession } = require('telegram/sessions');
+          const input = require('input'); // npm i input
+          const fs = require('fs');
+          const path = require('path');
+          const crypto = require('crypto');
           
           const apiId = ${APIID};
           const apiHash = '${APIHASH}';
