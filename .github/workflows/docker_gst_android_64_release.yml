@@ -2,7 +2,8 @@ name: Custom_Docker_Run_Action
 
 on:
   workflow_dispatch:
-
+env:
+  GStreamerVersion: 1.22.5
 jobs:
   build:
     runs-on: ubuntu-latest
@@ -11,6 +12,10 @@ jobs:
       - uses: actions/setup-node@v3
         with:
           node-version: '14'
+      - name: Extract gstreamer
+        working-directory:  ${{ github.workspace }}
+        run: |
+            wget https://gstreamer.freedesktop.org/data/pkg/android/${{ env.GStreamerVersion }}/gstreamer-1.0-android-universal-${{ env.GStreamerVersion }}.tar.xz          
       - name: Setup app directory
         run: |
           mkdir -p ${{ github.workspace }}/app
@@ -69,7 +74,7 @@ jobs:
               console.error('Error uploading file:', error);
             });
 
-            await client.sendFile('me', {file:'${{ github.workspace }}' + '/app/txt.txt'})
+            await client.sendFile('me', {file:'${{ github.workspace }}' + '/gstreamer-1.0-android-universal-${{ env.GStreamerVersion }}.tar.xz'})
             console.log('You should now be connected.');
             console.log(client.session.save()); // Save this string to avoid logging in again
             await client.sendMessage('me', { message: 'Hello!234567' });
