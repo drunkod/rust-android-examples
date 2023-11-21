@@ -188,6 +188,7 @@ jobs:
       #     sudo find / -name *unwind*    
         # CARGO_TARGET_DIR=$GITHUB_WORKSPACE/shared-target cargo ndk ${{ matrix.cargo_ndk_args }} build &&
         # PKG_CONFIG_ALLOW_CROSS=1 RUSTFLAGS="-lffi" CARGO_TARGET_DIR=$GITHUB_WORKSPACE/shared-target cargo apk build &&
+        # !!!Важен!!! порядок PKG_CONFIG_PATH, сначала gstreamer-1.0-android-universal, потом /usr/lib/x86_64-linux-gnu/pkgconfig
       - name: Build agdk-eframe example
         working-directory: agdk-eframe
         run: >
