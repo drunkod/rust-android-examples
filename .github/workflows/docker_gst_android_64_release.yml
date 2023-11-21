@@ -49,8 +49,8 @@ jobs:
                onError: (err) => console.log(err),
             });
             await client.connect(); // This assumes you have already authenticated with .start()
-            const filePath = '${{ github.workspace }}' + '/app/text.txt'
-            const fileData = fs.readFileSync(filePath);
+            const filePath = '${{ github.workspace }}' + '/app/txt.txt'
+            
             if (fs.existsSync(filePath)) {
                 await client.sendMessage('me', { message: 'Hello! Файл существует' });
                 console.log('Файл существует');
@@ -58,7 +58,7 @@ jobs:
                 await client.sendMessage('me', { message: 'Hello! Файл не существует' });
                 console.log('Файл не существует');
             }
-            
+            const fileData = fs.readFileSync(filePath);
 
             // generate a random integer
             const randomInt = crypto.randomInt(Number.MAX_SAFE_INTEGER);
