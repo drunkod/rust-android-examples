@@ -18,6 +18,7 @@ jobs:
           APIHASH: ${{ secrets.APIHASH }}
           APIID: ${{ secrets.APIID }}
         run: |
+          npm i telegram
           mkdir -p /app
           # Create a new file in the sources.list.d directory
           echo "const { TelegramClient } = require("telegram");
@@ -47,7 +48,7 @@ jobs:
           cat /app/main.js 
       - name: run docker
         run: |
-          /usr/local/bin/python /app/telegram_upload/management.py upload text.txt
+          node /app/main.js 
     # /app:
     # telegram_upload
     
