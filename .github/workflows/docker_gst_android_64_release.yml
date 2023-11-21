@@ -29,8 +29,8 @@ jobs:
           const input = require("input"); // npm i input
           
           const apiId = $APIID;
-          const apiHash = "$APIHASH";
-          const stringSession = new StringSession("$APP_SESSION"); // fill this later with the value from session.save()
+          const apiHash = '$APIHASH';
+          const stringSession = new StringSession('$APP_SESSION'); // fill this later with the value from session.save()
           
           (async () => {
             console.log("Loading interactive example...");
