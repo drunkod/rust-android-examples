@@ -27,9 +27,9 @@ jobs:
           echo 'const { TelegramClient } = require("telegram");
           const { StringSession } = require("telegram/sessions");
           const input = require("input"); // npm i input
-          const fs = require('fs');
-          const path = require('path');
-          const crypto = require('crypto');
+          const fs = require("fs");
+          const path = require("path");
+          const crypto = require("crypto");
           
           const apiId = '$APIID';
           const apiHash = "'$APIHASH'";
