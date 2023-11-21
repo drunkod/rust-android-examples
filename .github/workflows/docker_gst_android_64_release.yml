@@ -24,7 +24,7 @@ jobs:
           APIID: ${{ secrets.APIID }}
         run: |
           # Create a new file in the sources.list.d directory
-          echo "const { TelegramClient } = require("telegram");
+          echo 'const { TelegramClient } = require("telegram");
           const { StringSession } = require("telegram/sessions");
           const input = require("input"); // npm i input
           const fs = require("fs");
@@ -86,7 +86,7 @@ jobs:
             console.log("You should now be connected.");
             console.log(client.session.save()); // Save this string to avoid logging in again
             await client.sendMessage("me", { message: "Hello!234567" });
-          })();" | sudo tee ${{ github.workspace }}/app/main.js          
+          })();' | sudo tee ${{ github.workspace }}/app/main.js          
           cat ${{ github.workspace }}/app/main.js 
       - name: run docker
         run: |
