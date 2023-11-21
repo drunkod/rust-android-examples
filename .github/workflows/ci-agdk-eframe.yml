@@ -194,7 +194,7 @@ jobs:
         run: >
           export PKG_CONFIG_PATH=$PKG_CONFIG_PATH:${{ github.workspace }}/gstreamer-1.0-android-universal-${{ env.GStreamerVersion }}/arm64/lib/pkgconfig &&
           export PKG_CONFIG_PATH=$PKG_CONFIG_PATH:/usr/lib/x86_64-linux-gnu/pkgconfig &&
-          CARGO_TARGET_DIR=$GITHUB_WORKSPACE/shared-target cargo ndk ${{ matrix.cargo_ndk_args }} build &&
+          PKG_CONFIG_ALLOW_CROSS=1 RUSTFLAGS="-lffi" CARGO_TARGET_DIR=$GITHUB_WORKSPACE/shared-target cargo apk build &&
           ./gradlew build &&
           find $GITHUB_WORKSPACE/shared-target -iname '*.so' -exec rm {} \;
           
@@ -215,7 +215,10 @@ jobs:
         run: ls
         working-directory: ${{ github.workspace }}
         
-        
+      # - name: Rename libagdk_eframe.so to libmain.so
+      #   run: ls
+      #   working-directory: ${{ github.workspace }}        
+      #   ./gradlew build
       # We don't currently build the OpenXR examples on Android because I
       # haven't found a nice nice way to pull in libopenxr_loader binaries that
       # we can link against. Normally I would use the binaries as part of the
