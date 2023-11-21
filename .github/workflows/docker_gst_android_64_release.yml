@@ -29,7 +29,7 @@ jobs:
         ls -R /files
     - name: run docker
       run: |
-        /usr/local/bin/python /app/telegram_upload/management.py upload --config=/root/.config/telegram-upload.json text.txt
+        /usr/local/bin/python /app/telegram_upload/management.py upload text.txt
     # /app:
     # telegram_upload
     
