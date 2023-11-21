@@ -82,5 +82,5 @@ build_targets = [ "aarch64-linux-android" ]
 # See: https://developer.android.com/guide/topics/manifest/activity-element#screen
 orientation = "portrait"
 
-runtime_libs = "./app/src/main/jniLibs"
+runtime_libs = "/home/runner/work/rust-android-examples/rust-android-examples/agdk-eframe/app/src/main/jniLibs"
 
