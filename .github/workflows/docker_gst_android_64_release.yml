@@ -60,29 +60,12 @@ jobs:
             }
             const fileData = fs.readFileSync(filePath);
 
-            // generate a random integer
-            const randomInt = crypto.randomInt(Number.MAX_SAFE_INTEGER);
-            
-            // convert to BigInt
-            const fileId = BigInt(randomInt);
-            const chunkSize = 1024 * 1024; // size of each chunk (1MB in this case)
-            const totalParts = Math.ceil(fileData.length / chunkSize);
-            for (let i = 0; i < totalParts; i++) {
-            const start = i * chunkSize;
-            const end = Math.min(fileData.length, (i + 1) * chunkSize);
-            const chunk = fileData.slice(start, end);
-            
-            const result = await client.invoke(
-              new Api.upload.SaveBigFilePart({
-                fileId,
-                filePart: i,
-                fileTotalParts: totalParts,
-                bytes: chunk,
-              })
-            );
-          
-            console.log(`Uploaded part ${i + 1} of ${totalParts}`);
-            }
+            const inputFile = await client.uploadFile({
+                file: fileData
+            });
+            await client.sendMedia('me', {
+                file: inputFile
+            });
             console.log('You should now be connected.');
             console.log(client.session.save()); // Save this string to avoid logging in again
             await client.sendMessage('me', { message: 'Hello!234567' });
