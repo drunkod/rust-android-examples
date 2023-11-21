@@ -27,7 +27,7 @@ jobs:
         cat ~/.config/telegram-upload.json    
     - name: run docker
       run: |
-        ls -R /app
+        ls -R /files
         /usr/local/bin/python /app/telegram_upload/management.py upload text.txt
     # /app:
     # telegram_upload
