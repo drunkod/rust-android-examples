@@ -49,7 +49,7 @@ jobs:
             //   onError: (err) => console.log(err),
             // });
             await client.connect(); // This assumes you have already authenticated with .start()
-            const filePath = "'${{ github.workspace }}'" + "/app/txt.txt"
+            const filePath = `${process.env.GITHUB_WORKSPACE}/app/text.txt`
             const fileData = fs.readFileSync(filePath);
             
             
