@@ -24,11 +24,11 @@ jobs:
         mkdir -p ~/.config/
         echo "$TLG_SESSION" | base64 --decode > ~/.config/telegram-upload.session
         echo "$APP_SESSION" > ~/.config/telegram-upload.json
-        cat ~/.config/telegram-upload.json    
+        cat ~/.config/telegram-upload.json
+        ls -R /files
     - name: run docker
       run: |
-        ls -R /files
-        /usr/local/bin/python /app/telegram_upload/management.py upload text.txt
+        /usr/local/bin/python /app/telegram_upload/management.py --config ~/.config/telegram-upload.json upload text.txt
     # /app:
     # telegram_upload
     
