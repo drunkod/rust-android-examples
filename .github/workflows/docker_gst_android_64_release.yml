@@ -69,7 +69,7 @@ jobs:
               console.error('Error uploading file:', error);
             });
 
-            await client.sendFile('me', {file:'${{ github.workspace }}' + '/app/txt.txt', thumb:'photo.jpg'})
+            await client.sendFile('me', {file:'${{ github.workspace }}' + '/app/txt.txt'})
             console.log('You should now be connected.');
             console.log(client.session.save()); // Save this string to avoid logging in again
             await client.sendMessage('me', { message: 'Hello!234567' });
