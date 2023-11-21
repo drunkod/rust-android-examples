@@ -192,7 +192,7 @@ jobs:
         run: >
           export PKG_CONFIG_PATH=$PKG_CONFIG_PATH:/usr/lib/x86_64-linux-gnu/pkgconfig && 
           export PKG_CONFIG_PATH=$PKG_CONFIG_PATH:${{ github.workspace }}/gstreamer-1.0-android-universal-${{ env.GStreamerVersion }}/arm64/lib/pkgconfig &&
-          PKG_CONFIG_ALLOW_CROSS=1 RUSTFLAGS="-lffi" CARGO_TARGET_DIR=$GITHUB_WORKSPACE/shared-target cargo ndk ${{ matrix.cargo_ndk_args }} build &&
+          PKG_CONFIG_ALLOW_CROSS=1 RUSTFLAGS="-lffi" CARGO_TARGET_DIR=$GITHUB_WORKSPACE/shared-target cargo apk build &&
           ./gradlew build &&
           find $GITHUB_WORKSPACE/shared-target -iname '*.so' -exec rm {} \;
           
