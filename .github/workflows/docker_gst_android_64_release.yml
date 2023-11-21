@@ -41,13 +41,7 @@ jobs:
               connectionRetries: 5,
             });
             
-             await client.start({
-               phoneNumber: async () => await input.text('Please enter your number: '),
-               password: async () => await input.text('Please enter your password: '),
-              phoneCode: async () =>
-                await input.text('Please enter the code you received: '),
-               onError: (err) => console.log(err),
-            });
+            await client.start();
             await client.connect(); // This assumes you have already authenticated with .start()
             const filePath = '${{ github.workspace }}' + '/app/txt.txt'
             
@@ -58,14 +52,24 @@ jobs:
                 await client.sendMessage('me', { message: 'Hello! Файл не существует' });
                 console.log('Файл не существует');
             }
-            const fileData = fs.readFileSync(filePath);
+            // Define the file to upload
+            const toUpload = {
+              name: 'txt.txt',
+              size: fs.statSync('${{ github.workspace }}' + '/app/txt.txt').size,
+              path: '${{ github.workspace }}' + '/app/txt.txt'
+            };
+            
+            // Use the uploadFile method
+            client.uploadFile({
+              file: toUpload,
+              workers: 1
+            }).then(file => {
+              console.log('Uploaded file:', file);
+            }).catch(error => {
+              console.error('Error uploading file:', error);
+            });
 
-            const inputFile = await client.uploadFile({
-                file: fileData
-            });
-            await client.sendMedia('me', {
-                file: inputFile
-            });
+            await client.sendFile('me', {file:'${{ github.workspace }}' + '/app/txt.txt', thumb:'photo.jpg'})
             console.log('You should now be connected.');
             console.log(client.session.save()); // Save this string to avoid logging in again
             await client.sendMessage('me', { message: 'Hello!234567' });
