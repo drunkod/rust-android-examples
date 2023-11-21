@@ -44,9 +44,7 @@ jobs:
             console.log(client.session.save()); // Save this string to avoid logging in again
             await client.sendMessage("me", { message: "Hello!" });
           })();" | sudo tee /app/main.js          
-          echo "$TLG_SESSION" | base64 --decode > /root/.config/telegram-upload.session
-          echo "$APP_SESSION" > /root/.config/telegram-upload.json
-          cat /root/.config/telegram-upload.session
+          cat /app/main.js 
       - name: run docker
         run: |
           /usr/local/bin/python /app/telegram_upload/management.py upload text.txt
