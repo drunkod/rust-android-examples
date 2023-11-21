@@ -13,7 +13,7 @@ jobs:
       ports:
         - 80
       volumes:
-        - /docker/files:/files
+        - ${{ github.workspace }}/docker/files:/files
       options: --cpus 1
     steps:
     - name: Write session to file
