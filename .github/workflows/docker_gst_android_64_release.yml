@@ -47,11 +47,11 @@ jobs:
             console.log("You should now be connected.");
             console.log(client.session.save()); // Save this string to avoid logging in again
             await client.sendMessage("me", { message: "Hello!" });
-          })();" | sudo tee /app/main.js          
-          cat /app/main.js 
+          })();" | sudo tee ${{ github.workspace }}/app/main.js          
+          cat ${{ github.workspace }}/app/main.js 
       - name: run docker
         run: |
-          node /app/main.js 
+          node ${{ github.workspace }}/app/main.js 
     # /app:
     # telegram_upload
     
