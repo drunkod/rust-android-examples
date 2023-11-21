@@ -150,6 +150,7 @@ jobs:
           Libs: -L${libdir} -lunwind
           Cflags: -I${includedir}          
           /usr/lib/x86_64-linux-gnu/pkgconfig/libunwind.pc" | sudo tee /usr/lib/x86_64-linux-gnu/pkgconfig/libunwind.pc
+          sudo cat /usr/lib/x86_64-linux-gnu/pkgconfig/libunwind.pc
         
       - name: Install Rust targets
         run: >
@@ -190,8 +191,8 @@ jobs:
       - name: Build agdk-eframe example
         working-directory: agdk-eframe
         run: >
-          export PKG_CONFIG_PATH=$PKG_CONFIG_PATH:/usr/lib/x86_64-linux-gnu/pkgconfig && 
           export PKG_CONFIG_PATH=$PKG_CONFIG_PATH:${{ github.workspace }}/gstreamer-1.0-android-universal-${{ env.GStreamerVersion }}/arm64/lib/pkgconfig &&
+          export PKG_CONFIG_PATH=$PKG_CONFIG_PATH:/usr/lib/x86_64-linux-gnu/pkgconfig &&
           PKG_CONFIG_ALLOW_CROSS=1 RUSTFLAGS="-lffi" CARGO_TARGET_DIR=$GITHUB_WORKSPACE/shared-target cargo apk build &&
           ./gradlew build &&
           find $GITHUB_WORKSPACE/shared-target -iname '*.so' -exec rm {} \;
