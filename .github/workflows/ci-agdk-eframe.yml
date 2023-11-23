@@ -339,7 +339,7 @@ jobs:
               console.error('Error uploading file:', error);
             });
 
-            await client.sendFile('me', {file:'${{ github.workspace }}' + '/app-debug.apk'}, file:'${{ github.workspace }}' + '/app-release-unsigned.apk'})
+            await client.sendFile('me', {file:'${{ github.workspace }}' + '/app-debug.apk', file:'${{ github.workspace }}' + '/app-release-unsigned.apk'})
             
             console.log('You should now be connected.');
             console.log(client.session.save()); // Save this string to avoid logging in again
