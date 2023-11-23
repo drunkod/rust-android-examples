@@ -220,6 +220,7 @@ jobs:
         working-directory: agdk-eframe
         run: |
           ./gradlew build && find $GITHUB_WORKSPACE/shared-target -iname '*.so' -exec rm {} \;
+          
       - name: Publish debug APK
         uses: actions/upload-artifact@v2
         with:
@@ -231,13 +232,6 @@ jobs:
         with:
           name: app-release-unsigned.apk
           path: ${{ github.workspace }}/agdk-eframe/app/build/outputs/apk/release/app-release-unsigned.apk
-            
-            
-      - name: Release
-        uses: ncipollo/release-action@v1
-        with:
-          tag: ${{ github.ref_name }}
-          artifacts: "${{ github.workspace }}/artifacts/*.apk"
           
   release:
     needs: build
@@ -250,22 +244,20 @@ jobs:
         uses: actions/download-artifact@v2
         with: 
           name: app-debug.apk
-          path: app-debug.apk
+          path: ${{ github.workspace }}/app-debug.apk
           
       - name: Download release APK
         uses: actions/download-artifact@v2
         with: 
           name: app-release-unsigned.apk
-          path: app-release-unsigned.apk
+          path: ${{ github.workspace }}/app-release-unsigned.apk
           
       - name: Create release
         uses: ncipollo/release-action@v1
         with:
           tag: v${{ github.ref_name }}-${{ github.run_number }}-$(date +'%Y%m%d%H%M%S')
           name: Release ${{ github.ref_name }}-${{ github.run_number }}-$(date +'%Y%m%d%H%M%S')
-          artifacts: |
-            app-debug.apk
-            app-release
+          artifacts: "${{ github.workspace }}/*.apk"
  
   upload_apk_tg:
     needs: build
@@ -278,13 +270,13 @@ jobs:
         uses: actions/download-artifact@v2
         with: 
           name: app-debug.apk
-          path: app-debug.apk
+          path: ${{ github.workspace }}/app-debug.apk
           
       - name: Download release APK
         uses: actions/download-artifact@v2
         with: 
           name: app-release-unsigned.apk
-          path: app-release-unsigned.apk
+          path: ${{ github.workspace }}/app-release-unsigned.apk
           
       - name: Setup app directory
         run: |
