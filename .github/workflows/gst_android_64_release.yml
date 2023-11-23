@@ -1,5 +1,5 @@
 # The 32 and 64 bit version of these actions should be kept in sync
-name: GST Android 64-bit Release
+name: GST Android 64-bit Release to artifacts .so
 
 on:
   push:
