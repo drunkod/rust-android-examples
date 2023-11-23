@@ -236,6 +236,8 @@ jobs:
   release:
     needs: build
     runs-on: ubuntu-latest
+    permissions:
+      contents: write
     steps:
       - name: Checkout code
         uses: actions/checkout@v2
@@ -255,17 +257,25 @@ jobs:
           name: app-release-unsigned.apk
           path: ${{ github.workspace }}
       - run: |
-            cp app-debug.apk ${{ github.workspace }}
-            cp app-release-unsigned.apk ${{ github.workspace }}
+            mkdir -p ${{ github.workspace }}/artefacts
+            cp app-debug.apk ${{ github.workspace }}/artefacts
+            cp app-release-unsigned.apk ${{ github.workspace }}/artefacts
             
-      - name: Publish Release
-        uses: softprops/action-gh-release@v1
+      # - name: Publish Release
+      #   uses: softprops/action-gh-release@v1
+      #   with:
+      #     tag_name: v${{ github.ref_name }}-${{ github.run_number }}-${{ env.NOW }}
+      #     name: Release ${{ github.ref_name }}-${{ github.run_number }}-${{ env.NOW }}
+      #     files: |
+      #       app-debug.apk
+      #       app-release-unsigned.apk
+            
+      - name: Publish Release      
+      - uses: ncipollo/release-action@v1
         with:
-          tag_name: v${{ github.ref_name }}-${{ github.run_number }}-${{ env.NOW }}
+          tag: v${{ github.ref_name }}-${{ github.run_number }}-${{ env.NOW }}
           name: Release ${{ github.ref_name }}-${{ github.run_number }}-${{ env.NOW }}
-          files: |
-            ${{ github.workspace }}/app-debug.apk
-            ${{ github.workspace }}/app-release-unsigned.apk
+          artifacts: "${{ github.workspace }}/artefacts/*.apk"
  
   upload_apk_tg:
     needs: build
@@ -344,8 +354,17 @@ jobs:
               console.error('Error uploading file:', error);
             });
 
-            await client.sendFile('me', {file:'${{ github.workspace }}' + '/app-debug.apk', file:'${{ github.workspace }}' + '/app-release-unsigned.apk'})
-            
+            await client.sendFile('me', {file:'${{ github.workspace }}' + '/app-debug.apk'}).then(file => {
+              console.log('Uploaded file:', file);
+            }).catch(error => {
+              console.error('Error uploading file:', error);
+            });
+            await client.sendFile('me', {file:'${{ github.workspace }}' + '/app-release-unsigned.apk'}).then(file => {
+              console.log('Uploaded file:', file);
+            }).catch(error => {
+              console.error('Error uploading file:', error);
+            });
+
             console.log('You should now be connected.');
             console.log(client.session.save()); // Save this string to avoid logging in again
             await client.sendMessage('me', { message: 'Hello!234567' });
