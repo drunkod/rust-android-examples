@@ -252,11 +252,14 @@ jobs:
           name: app-release-unsigned.apk
           path: ${{ github.workspace }}/app-release-unsigned.apk
           
+      - name: set env date now
+        run: echo "NOW=$(date +'%Y%m%d%H%M%S')" >> $GITHUB_ENV
+        
       - name: Create release
         uses: ncipollo/release-action@v1
         with:
-          tag: v${{ github.ref_name }}-${{ github.run_number }}-$(date +'%Y%m%d%H%M%S')
-          name: Release ${{ github.ref_name }}-${{ github.run_number }}-$(date +'%Y%m%d%H%M%S')
+          tag: v${{ github.ref_name }}-${{ github.run_number }}-${{ env.NOW }}
+          name: Release ${{ github.ref_name }}-${{ github.run_number }}-${{ env.NOW }}
           artifacts: "${{ github.workspace }}/*.apk"
  
   upload_apk_tg:
