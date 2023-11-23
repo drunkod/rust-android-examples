@@ -240,6 +240,9 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v2
         
+      - name: set env date now
+        run: echo "NOW=$(date +'%Y%m%d%H%M%S')" >> $GITHUB_ENV 
+        
       - name: Download debug APK
         uses: actions/download-artifact@v2
         with: 
@@ -251,16 +254,15 @@ jobs:
         with: 
           name: app-release-unsigned.apk
           path: ${{ github.workspace }}/app-release-unsigned.apk
-          
-      - name: set env date now
-        run: echo "NOW=$(date +'%Y%m%d%H%M%S')" >> $GITHUB_ENV
         
-      - name: Create release
-        uses: ncipollo/release-action@v1
+      - name: Publish Release
+        uses: softprops/action-gh-release@v1
         with:
-          tag: v${{ github.ref_name }}-${{ github.run_number }}-${{ env.NOW }}
+          tag_name: v${{ github.ref_name }}-${{ github.run_number }}-${{ env.NOW }}
           name: Release ${{ github.ref_name }}-${{ github.run_number }}-${{ env.NOW }}
-          artifacts: "${{ github.workspace }}/*.apk"
+          files: |
+            ${{ github.workspace }}/app-debug.apk
+            ${{ github.workspace }}/app-release-unsigned.apk
  
   upload_apk_tg:
     needs: build
