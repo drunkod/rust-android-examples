@@ -244,16 +244,16 @@ jobs:
         run: echo "NOW=$(date +'%Y%m%d%H%M%S')" >> $GITHUB_ENV 
         
       - name: Download debug APK
-        uses: actions/download-artifact@v2
+        uses: actions/download-artifact@v3
         with: 
           name: app-debug.apk
-          path: ${{ github.workspace }}/app-debug.apk
+          path: ${{ github.workspace }}
           
       - name: Download release APK
-        uses: actions/download-artifact@v2
+        uses: actions/download-artifact@v3
         with: 
           name: app-release-unsigned.apk
-          path: ${{ github.workspace }}/app-release-unsigned.apk
+          path: ${{ github.workspace }}
         
       - name: Publish Release
         uses: softprops/action-gh-release@v1
@@ -272,16 +272,16 @@ jobs:
         uses: actions/checkout@v2
         
       - name: Download debug APK
-        uses: actions/download-artifact@v2
+        uses: actions/download-artifact@v3
         with: 
           name: app-debug.apk
-          path: ${{ github.workspace }}/app-debug.apk
+          path: ${{ github.workspace }}
           
       - name: Download release APK
-        uses: actions/download-artifact@v2
+        uses: actions/download-artifact@v3
         with: 
           name: app-release-unsigned.apk
-          path: ${{ github.workspace }}/app-release-unsigned.apk
+          path: ${{ github.workspace }}
           
       - name: Setup app directory
         run: |
