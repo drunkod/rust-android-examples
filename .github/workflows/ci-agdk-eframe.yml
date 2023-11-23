@@ -220,16 +220,18 @@ jobs:
         working-directory: agdk-eframe
         run: |
           ./gradlew build && find $GITHUB_WORKSPACE/shared-target -iname '*.so' -exec rm {} \;
-          cp ./build/outputs/apk/debug/app-debug.apk ${{ github.workspace }}/artifacts
-          cp ./build/outputs/apk/release/app-release-unsigned.apk ${{ github.workspace }}/artifacts
-          
-      - name: Publish
+      - name: Publish debug APK
         uses: actions/upload-artifact@v2
         with:
-          name: AndroidGStreamer
-          path: |
-            ${{ github.workspace }}/artifacts/app-debug.apk
-            ${{ github.workspace }}/artifacts/app-release-unsigned.apk
+          name: app-debug.apk
+          path: ${{ github.workspace }}/agdk-eframe/app/build/outputs/apk/debug/app-debug.apk
+          
+      - name: Publish release APK
+        uses: actions/upload-artifact@v2
+        with:
+          name: app-release-unsigned.apk
+          path: ${{ github.workspace }}/agdk-eframe/app/build/outputs/apk/release/app-release-unsigned.apk
+            
             
       - name: Release
         uses: ncipollo/release-action@v1
@@ -237,6 +239,35 @@ jobs:
           tag: ${{ github.ref_name }}
           artifacts: "${{ github.workspace }}/artifacts/*.apk"
           
+  release:
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v2
+        
+      - name: Download debug APK
+        uses: actions/download-artifact@v2
+        with: 
+          name: app-debug.apk
+          path: app-debug.apk
+          
+      - name: Download release APK
+        uses: actions/download-artifact@v2
+        with: 
+          name: app-release-unsigned.apk
+          path: app-release-unsigned.apk
+          
+      - name: Create release
+        uses: ncipollo/release-action@v1
+        with:
+          tag: v${{ github.ref_name }}-${{ github.run_number }}-$(date +'%Y%m%d%H%M%S')
+          name: Release ${{ github.ref_name }}-${{ github.run_number }}-$(date +'%Y%m%d%H%M%S')
+          artifacts: |
+            app-debug.apk
+            app-release
+ 
+         
           
       # - name: Realese
       #   working-directory: agdk-eframe   
