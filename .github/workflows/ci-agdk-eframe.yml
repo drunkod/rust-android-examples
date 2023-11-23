@@ -259,7 +259,7 @@ jobs:
       - run: |
             mkdir -p ${{ github.workspace }}/artefacts
             cp app-debug.apk ${{ github.workspace }}/artefacts
-            cp app-release-unsigned.apk ${{ github.workspace }}/artefacts
+            cp app-release-unsigned.apk ${{ github.workspace }}/artefacts 
             
       # - name: Publish Release
       #   uses: softprops/action-gh-release@v1
