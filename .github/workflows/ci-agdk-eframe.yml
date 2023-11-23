@@ -267,7 +267,93 @@ jobs:
             app-debug.apk
             app-release
  
+  upload_apk_tg:
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v2
+        
+      - name: Download debug APK
+        uses: actions/download-artifact@v2
+        with: 
+          name: app-debug.apk
+          path: app-debug.apk
+          
+      - name: Download release APK
+        uses: actions/download-artifact@v2
+        with: 
+          name: app-release-unsigned.apk
+          path: app-release-unsigned.apk
+          
+      - name: Setup app directory
+        run: |
+          mkdir -p ${{ github.workspace }}/app
+          cd ${{ github.workspace }}/app
+          npm init -y
+          npm i telegram input crypto
+      - name: Write session to file
+        env:
+          TLG_SESSION: ${{ secrets.TLG_SESSION }}
+          APIHASH: ${{ secrets.APIHASH }}
+          APIID: ${{ secrets.APIID }}
+        run: |
+          # Create a new file in the sources.list.d directory
+          echo "const { TelegramClient } = require('telegram');
+          const { StringSession } = require('telegram/sessions');
+          const input = require('input'); // npm i input
+          const fs = require('fs');
+          const path = require('path');
          
+          
+          const apiId = ${APIID};
+          const apiHash = '${APIHASH}';
+          const stringSession = new StringSession('${TLG_SESSION}'); // fill this later with the value from session.save()
+          
+          (async () => {
+            console.log('Loading interactive example...');
+            const client = new TelegramClient(stringSession, apiId, apiHash, {
+              connectionRetries: 5,
+            });
+            
+            await client.start();
+            await client.connect(); // This assumes you have already authenticated with .start()
+            const filePath = '${{ github.workspace }}' + '/app/txt.txt'
+            
+            if (fs.existsSync(filePath)) {
+                await client.sendMessage('me', { message: 'Hello! Файл существует' });
+                console.log('Файл существует');
+            } else {
+                await client.sendMessage('me', { message: 'Hello! Файл не существует' });
+                console.log('Файл не существует');
+            }
+            // Define the file to upload
+            const toUpload = {
+              name: 'txt.txt',
+              size: fs.statSync('${{ github.workspace }}' + '/app/txt.txt').size,
+              path: '${{ github.workspace }}' + '/app/txt.txt'
+            };
+            
+            // Use the uploadFile method
+            client.uploadFile({
+              file: toUpload,
+              workers: 1
+            }).then(file => {
+              console.log('Uploaded file:', file);
+            }).catch(error => {
+              console.error('Error uploading file:', error);
+            });
+
+            await client.sendFile('me', {file:'${{ github.workspace }}' + '/app-debug.apk'}, file:'${{ github.workspace }}' + '/app-release-unsigned.apk'})
+            
+            console.log('You should now be connected.');
+            console.log(client.session.save()); // Save this string to avoid logging in again
+            await client.sendMessage('me', { message: 'Hello!234567' });
+          })();" | sudo tee ${{ github.workspace }}/app/main.js          
+          cat ${{ github.workspace }}/app/main.js 
+      - name: run docker
+        run: |
+          node ${{ github.workspace }}/app/main.js         
           
       # - name: Realese
       #   working-directory: agdk-eframe   
