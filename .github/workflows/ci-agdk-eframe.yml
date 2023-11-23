@@ -218,9 +218,25 @@ jobs:
           
       - name: Build gradlew apk example
         working-directory: agdk-eframe
-        run: >
-          ./gradlew build &&
-          find $GITHUB_WORKSPACE/shared-target -iname '*.so' -exec rm {} \;
+        run: |
+          ./gradlew build && find $GITHUB_WORKSPACE/shared-target -iname '*.so' -exec rm {} \;
+          cp ./build/outputs/apk/debug/app-debug.apk ${{ github.workspace }}/artifacts
+          cp ./build/outputs/apk/release/app-release-unsigned.apk ${{ github.workspace }}/artifacts
+          
+      - name: Publish
+        uses: actions/upload-artifact@v2
+        with:
+          name: AndroidGStreamer
+          path: |
+            ${{ github.workspace }}/artifacts/app-debug.apk
+            ${{ github.workspace }}/artifacts/app-release-unsigned.apk
+            
+      - name: Release
+        uses: ncipollo/release-action@v1
+        with:
+          tag: ${{ github.ref_name }}
+          artifacts: "${{ github.workspace }}/artifacts/*.apk"
+          
           
       # - name: Realese
       #   working-directory: agdk-eframe   
