@@ -256,7 +256,9 @@ jobs:
         with: 
           name: app-release-unsigned.apk
           path: ${{ github.workspace }}
-      - run: |
+          
+      - name: cp app    
+        run: |
             mkdir -p ${{ github.workspace }}/artefacts
             cp app-debug.apk ${{ github.workspace }}/artefacts
             cp app-release-unsigned.apk ${{ github.workspace }}/artefacts 
@@ -271,7 +273,7 @@ jobs:
       #       app-release-unsigned.apk
             
       - name: Publish Release      
-      - uses: ncipollo/release-action@v1
+        uses: ncipollo/release-action@v1
         with:
           tag: v${{ github.ref_name }}-${{ github.run_number }}-${{ env.NOW }}
           name: Release ${{ github.ref_name }}-${{ github.run_number }}-${{ env.NOW }}
