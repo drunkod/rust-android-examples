@@ -42,10 +42,10 @@ jobs:
             mkdir gstreamer-1.0-android-universal-${{ env.GStreamerVersion }}
             tar xf gstreamer-1.0-android-universal-${{ env.GStreamerVersion }}.tar.xz -C gstreamer-1.0-android-universal-${{ env.GStreamerVersion }}  
           
-      - name: Download *.so
-        run: |
-          wget -O ${{ github.workspace }}/agdk-eframe/app/src/main/jniLibs/arm64-v8a/libc++_shared.so https://github.com/drunkod/rust-android-examples/releases/download/lib_so_minimal/libc++_shared.so
-          wget -O ${{ github.workspace }}/agdk-eframe/app/src/main/jniLibs/arm64-v8a/libgstreamer_android.so https://github.com/drunkod/rust-android-examples/releases/download/lib_so_minimal/libgstreamer_android.so      
+      # - name: Download *.so
+      #   run: |
+      #     wget -O ${{ github.workspace }}/agdk-eframe/app/src/main/jniLibs/arm64-v8a/libc++_shared.so https://github.com/drunkod/rust-android-examples/releases/download/lib_so_minimal/libc++_shared.so
+      #     wget -O ${{ github.workspace }}/agdk-eframe/app/src/main/jniLibs/arm64-v8a/libgstreamer_android.so https://github.com/drunkod/rust-android-examples/releases/download/lib_so_minimal/libgstreamer_android.so      
       
       - name: List files
         run: ls -R ${{ github.workspace }}/agdk-eframe/app/src/main/jniLibs/arm64-v8a/
@@ -160,8 +160,8 @@ jobs:
       - name: Install cargo-apk
         run: cargo install cargo-apk
         
-      - name: Install cargo-ndk
-        run: cargo install cargo-ndk  
+      # - name: Install cargo-ndk
+      #   run: cargo install cargo-ndk  
 
       - name: Install gtk3-dev
         run: sudo apt-get install libgtk-3-dev
@@ -194,18 +194,18 @@ jobs:
         run: >
           export PKG_CONFIG_PATH=$PKG_CONFIG_PATH:${{ github.workspace }}/gstreamer-1.0-android-universal-${{ env.GStreamerVersion }}/arm64/lib/pkgconfig &&
           export PKG_CONFIG_PATH=$PKG_CONFIG_PATH:/usr/lib/x86_64-linux-gnu/pkgconfig &&
-          PKG_CONFIG_ALLOW_CROSS=1 RUSTFLAGS="-lffi" CARGO_TARGET_DIR=$GITHUB_WORKSPACE/shared-target cargo apk build
+          RUSTFLAGS="-lffi" CARGO_TARGET_DIR=$GITHUB_WORKSPACE/shared-target cargo apk build
           
-      - name: Display structure of downloaded files
-        run: ls -R
-        working-directory: agdk-eframe/app
-      - name: Display structure of downloaded files
-        run: ls -R
-        working-directory: agdk-eframe 
+      # - name: Display structure of downloaded files
+      #   run: ls -R 
+      #   working-directory: agdk-eframe/app
+      # - name: Display structure of downloaded files
+      #   run: ls -R
+      #   working-directory: agdk-eframe 
          
       - name: Display structure of downloaded files
         run: ls
-        working-directory: ${{ github.workspace }}/shared-target
+        working-directory: ${{ github.workspace }}/shared-target/debug/apk/lib/arm64-v8a
         
       - name: Display structure of downloaded files
         run: ls
@@ -214,7 +214,7 @@ jobs:
       - name: Copy Rename libagdk_eframe.so to libmain.so
         run: |
           cp ${{ github.workspace }}/shared-target/debug/apk/lib/arm64-v8a/* ${{ github.workspace }}/agdk-eframe/app/src/main/jniLibs/arm64-v8a/
-          mv ${{ github.workspace }}/agdk-eframe/app/src/main/jniLibs/arm64-v8a/libagdk_eframe.so ${{ github.workspace }}/agdk-eframe/app/src/main/jniLibs/arm64-v8a/libmain.so
+          # mv ${{ github.workspace }}/agdk-eframe/app/src/main/jniLibs/arm64-v8a/libagdk_eframe.so ${{ github.workspace }}/agdk-eframe/app/src/main/jniLibs/arm64-v8a/libmain.so
           
       - name: Build gradlew apk example
         working-directory: agdk-eframe
