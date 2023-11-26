@@ -42,10 +42,10 @@ jobs:
             mkdir gstreamer-1.0-android-universal-${{ env.GStreamerVersion }}
             tar xf gstreamer-1.0-android-universal-${{ env.GStreamerVersion }}.tar.xz -C gstreamer-1.0-android-universal-${{ env.GStreamerVersion }}  
           
-      # - name: Download *.so
-      #   run: |
-      #     wget -O ${{ github.workspace }}/agdk-eframe/app/src/main/jniLibs/arm64-v8a/libc++_shared.so https://github.com/drunkod/rust-android-examples/releases/download/lib_so_minimal/libc++_shared.so
-      #     wget -O ${{ github.workspace }}/agdk-eframe/app/src/main/jniLibs/arm64-v8a/libgstreamer_android.so https://github.com/drunkod/rust-android-examples/releases/download/lib_so_minimal/libgstreamer_android.so      
+      - name: Download *.so
+        run: |
+          wget -O ${{ github.workspace }}/agdk-eframe/app/src/main/jniLibs/arm64-v8a/libc++_shared.so https://github.com/drunkod/rust-android-examples/releases/download/lib_so_minimal/libc++_shared.so
+          wget -O ${{ github.workspace }}/agdk-eframe/app/src/main/jniLibs/arm64-v8a/libgstreamer_android.so https://github.com/drunkod/rust-android-examples/releases/download/lib_so_minimal/libgstreamer_android.so      
       
       - name: List files
         run: ls -R ${{ github.workspace }}/agdk-eframe/app/src/main/jniLibs/arm64-v8a/
