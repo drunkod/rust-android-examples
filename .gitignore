@@ -1,3 +1,4 @@
 .idea
 gstreamer-android/gst-android-build/*
 gstreamer-android/src/*
+gstreamer-android/out/*
