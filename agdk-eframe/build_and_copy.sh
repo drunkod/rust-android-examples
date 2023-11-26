@@ -7,8 +7,13 @@ export ANDROID_HOME=/home/alex/Android/Sdk
 export ANDROID_NDK_HOME=$ANDROID_HOME/ndk/25.2.9519653
 
 export PATH=$PATH:$ANDROID_NDK_HOME/toolchains/llvm/prebuilt/linux-x86_64/bin
+<<<<<<< HEAD
 export PKG_CONFIG_PATH=/home/alex/Документы/android/media/examples/android/libgstreamer_android_gen/gst-android-build/arm64-v8a/lib/pkgconfig
 
+=======
+# export PKG_CONFIG_PATH=/home/alex/Документы/android/media/examples/android/libgstreamer_android_gen/gst-android-build/arm64-v8a/lib/pkgconfig
+export PKG_CONFIG_PATH=/home/alex/Документы/android/rust-android-examples/gstreamer-android/gst-android-build/arm64-v8a/lib/pkgconfig
+>>>>>>> minimal
 export JAVA_HOME=/opt/android-studio/jbr
 
 # Step 1: Delete all files in the specified directory
