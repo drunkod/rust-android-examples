@@ -12,7 +12,7 @@ export PKG_CONFIG_PATH=/home/alex/Документы/android/media/examples/andr
 
 =======
 # export PKG_CONFIG_PATH=/home/alex/Документы/android/media/examples/android/libgstreamer_android_gen/gst-android-build/arm64-v8a/lib/pkgconfig
-export PKG_CONFIG_PATH=/home/alex/Документы/android/rust-android-examples/gstreamer-android/gst-android-build/arm64-v8a/lib/pkgconfig
+export PKG_CONFIG_PATH=../gstreamer-android/gst-android-build/arm64-v8a/lib/pkgconfig
 >>>>>>> minimal
 export JAVA_HOME=/opt/android-studio/jbr
 
