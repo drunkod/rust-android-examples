@@ -1,5 +1,5 @@
 [package]
-name = "agdk-eframe"
+name = "main"
 version = "0.1.0"
 edition = "2021"
 resolver = "2"
@@ -52,7 +52,7 @@ gst = { version = "0.21.2", package = "gstreamer", default-features = false }
 # rustflags = ["-lffi", "-C", "link-args=-lunwind"]
 
 [lib]
-name="agdk_eframe"
+name="main"
 crate_type=["cdylib"]
 
 [package.metadata.android]
