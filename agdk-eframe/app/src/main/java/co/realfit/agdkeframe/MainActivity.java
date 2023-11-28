@@ -25,6 +25,9 @@ public class MainActivity extends GameActivity {
         // library that depends on it."
         // See https://developer.android.com/ndk/guides/cpp-support#shared_runtimes
         System.loadLibrary("c++_shared");
+        // not use when export OPENSSL_STATIC=1
+        // System.loadLibrary("crypto");
+        // System.loadLibrary("ssl");
         System.loadLibrary("gstreamer_android");
         // Load the native library.
         // The name "android-game" depends on your CMake configuration, must be

@@ -1,0 +1,16 @@
+[package]
+name = "auteur-controlling"
+version = "0.1.0"
+authors = ["Mathieu Duponchelle <mathieu@centricular.com>"]
+edition = "2018"
+license = "MIT"
+
+[dependencies]
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1"
+uuid = { version = "1.0", features = ["serde"] }
+chrono = { version = "0.4", features = ["serde"] }
+
+[lib]
+name="auteur_controlling"
+path="mod.rs"

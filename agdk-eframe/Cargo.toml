@@ -7,7 +7,7 @@ resolver = "2"
 [dependencies]
 # for gstreamer
 # libunwind = "1.3.3"
-# libffi = "3.2.0"
+libffi = "3.2.0"
 log = "0.4"
 # winit = { version = "0.29.3", features = [ "android-game-activity" ] }
 egui-winit = { version = "0.23", features = [ "android-game-activity" ] }
@@ -28,7 +28,7 @@ android_logger = "0.13.1"
 jni = { version = "0.5", default-features = false }
 # gst = { version = "0.21.2", package = "gstreamer", default-features = false }
 log = { version = "0.4.18", default-features = false }
-glib = { git = "https://github.com/gtk-rs/gtk-rs-core" }
+# glib = { git = "https://github.com/gtk-rs/gtk-rs-core" }
 gst = { version = "0.21.2", package = "gstreamer", default-features = false }
 # gst-gl = { package = "gstreamer-gl",  optional = true }
 # gst-gl-egl = { package = "gstreamer-gl-egl", optional = true }
@@ -47,6 +47,43 @@ gst = { version = "0.21.2", package = "gstreamer", default-features = false }
 # gst-allocators = { package = "gstreamer-allocators", optional = true }
 # gio = { git = "https://github.com/gtk-rs/gtk-rs-core", optional = true }
 
+# [dependencies]
+anyhow = "1" 
+# gst = {package = "gstreamer", version = "0.20.5"}
+gst-base = { package = "gstreamer-base", version = "0.21.2"}
+gst-app = { package = "gstreamer-app" , version = "0.21.2"}
+gst-video = { package = "gstreamer-video",  version = "0.21.2"}
+gst-utils = { package = "gstreamer-utils", version = "0.21.2"}
+glib = "0.18.3"
+futures = "0.3"
+tokio = { version = "1.6.1", features = ["time", "test-util"] }
+actix = "0.13"
+actix-rt = "2"
+actix-web = { version = "4", features = ["openssl"] }
+actix-web-actors = "4"
+openssl-sys = "0.9.96"
+openssl = "0.10"
+tracing-actix-web = "0.5"
+tracing = { version = "0.1", features = ["log"] }
+tracing-actix = "0.4.0"
+tracing-futures = { version = "0.2", features = ["std-future"] }
+tracing-subscriber = { version = "0.3", features = ["registry", "env-filter"] }
+tracing-log = "0.1"
+tracing-error = "0.2"
+tracing-appender = "0.2"
+test-log = { version = "0.2", features = ["trace"], default-features = false }
+serde = "1"
+serde_json = "1"
+structopt = "0.3"
+uuid = { version = "1.0", features = ["v4"] }
+chrono = "0.4"
+priority-queue = "1.1.0"
+smallvec = "1"
+
+auteur-controlling = { path = "src/common" }
+
+[dev-dependencies]
+tempfile = "3.2.0"
 
 [build]
 # rustflags = ["-lffi", "-C", "link-args=-lunwind"]

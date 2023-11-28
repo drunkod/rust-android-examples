@@ -31,3 +31,14 @@ RUSTFLAGS="-lffi" cargo apk build
 ./gradlew clean assembleDebug installDebug
 adb shell am start -n co.realfit.agdkeframe/.MainActivity
 adb logcat | egrep '(agdkeframe|gst)'
+adb logcat | egrep '(actix_web|tracing_actix_web|RustStdoutStderr|main)'
+# logcat output by the tags "main" and "RustStdoutStderr",
+adb logcat -s main RustStdoutStderr
+```
+
+## How test actix_web from curl
+
+```
+curl -X POST -H "Content-Type: application/json" -d '{"action":"do_something", "value":10}' http://192.168.3.40:8080/command
+
+```
