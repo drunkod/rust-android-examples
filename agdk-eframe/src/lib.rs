@@ -94,71 +94,71 @@ impl MyApp {
     }
 }
 
-#[no_mangle]
-pub extern fn rust_greeting() {
-    // Get a string containing the passed pipeline launch syntax audiotestsrc wave=saw freq=205 ! autoaudiosink
-    let pipeline_str = "audiotestsrc wave=saw freq=205 ! autoaudiosink";
+// #[no_mangle]
+// pub extern fn rust_greeting() {
+//     // Get a string containing the passed pipeline launch syntax audiotestsrc wave=saw freq=205 ! autoaudiosink
+//     let pipeline_str = "audiotestsrc wave=saw freq=205 ! autoaudiosink";
     
-    gst::init().unwrap();
-    let gst_version_string = gst::version_string();
+//     // gst::init().unwrap();
+//     let gst_version_string = gst::version_string();
     
-    // Let GStreamer create a pipeline from the parsed launch syntax on the cli.
-    // In comparison to the launch_glib_main example, this is using the advanced launch syntax
-    // parsing API of GStreamer. The function returns a Result, handing us the pipeline if
-    // parsing and creating succeeded, and hands us detailed error information if something
-    // went wrong. The error is passed as gst::ParseError. In this example, we separately
-    // handle the NoSuchElement error, that GStreamer uses to notify us about elements
-    // used within the launch syntax, that are not available (not installed).
-    // Especially GUIs should probably handle this case, to tell users that they need to
-    // install the corresponding gstreamer plugins.
+//     // Let GStreamer create a pipeline from the parsed launch syntax on the cli.
+//     // In comparison to the launch_glib_main example, this is using the advanced launch syntax
+//     // parsing API of GStreamer. The function returns a Result, handing us the pipeline if
+//     // parsing and creating succeeded, and hands us detailed error information if something
+//     // went wrong. The error is passed as gst::ParseError. In this example, we separately
+//     // handle the NoSuchElement error, that GStreamer uses to notify us about elements
+//     // used within the launch syntax, that are not available (not installed).
+//     // Especially GUIs should probably handle this case, to tell users that they need to
+//     // install the corresponding gstreamer plugins.
 
-    let mut context = gst::ParseContext::new();
-    let pipeline =
-        match gst::parse_launch_full(&pipeline_str, Some(&mut context), gst::ParseFlags::empty()) {
-            Ok(pipeline) => pipeline,
-            Err(err) => {
-                if let Some(gst::ParseError::NoSuchElement) = err.kind::<gst::ParseError>() {
-                    println!("Missing element(s): {:?}", context.missing_elements());
-                } else {
-                    println!("Failed to parse pipeline: {err}")
-                }
+//     let mut context = gst::ParseContext::new();
+//     let pipeline =
+//         match gst::parse_launch_full(&pipeline_str, Some(&mut context), gst::ParseFlags::empty()) {
+//             Ok(pipeline) => pipeline,
+//             Err(err) => {
+//                 if let Some(gst::ParseError::NoSuchElement) = err.kind::<gst::ParseError>() {
+//                     println!("Missing element(s): {:?}", context.missing_elements());
+//                 } else {
+//                     println!("Failed to parse pipeline: {err}")
+//                 }
 
-                return
-            }
-        };
-    let bus = pipeline.bus().unwrap();
+//                 return
+//             }
+//         };
+//     let bus = pipeline.bus().unwrap();
 
-    pipeline
-        .set_state(gst::State::Playing)
-        .expect("Unable to set the pipeline to the `Playing` state");
+//     pipeline
+//         .set_state(gst::State::Playing)
+//         .expect("Unable to set the pipeline to the `Playing` state");
 
-    for msg in bus.iter_timed(gst::ClockTime::NONE) {
-        use gst::MessageView;
+//     for msg in bus.iter_timed(gst::ClockTime::NONE) {
+//         use gst::MessageView;
 
-        match msg.view() {
-            MessageView::Eos(..) => break,
-            MessageView::Error(err) => {
-                println!(
-                    "Error from {:?}: {} ({:?})",
-                    err.src().map(|s| s.path_string()),
-                    err.error(),
-                    err.debug()
-                );
-                break;
-            }
-            _ => (),
-        }
-    }
+//         match msg.view() {
+//             MessageView::Eos(..) => break,
+//             MessageView::Error(err) => {
+//                 println!(
+//                     "Error from {:?}: {} ({:?})",
+//                     err.src().map(|s| s.path_string()),
+//                     err.error(),
+//                     err.debug()
+//                 );
+//                 break;
+//             }
+//             _ => (),
+//         }
+//     }
 
-    pipeline
-        .set_state(gst::State::Null)
-        .expect("Unable to set the pipeline to the `Null` state");
+//     pipeline
+//         .set_state(gst::State::Null)
+//         .expect("Unable to set the pipeline to the `Null` state");
 
-    debug!("Using {} as player", gst::version_string());
+//     debug!("Using {} as player", gst::version_string());
     
-    // let gst_version_string = gst::version_string();
-    // CString::new(gst::version_string().to_owned()).unwrap().into_raw()
-}
+//     // let gst_version_string = gst::version_string();
+//     // CString::new(gst::version_string().to_owned()).unwrap().into_raw()
+// }
 
 /// Application entry point
 fn start_server(cfg: Config) -> Result<(), Error> {
@@ -207,9 +207,9 @@ fn start_server(cfg: Config) -> Result<(), Error> {
     //     .with(fmt_layer);
     // tracing::subscriber::set_global_default(subscriber).expect("Failed to set subscriber");
 
-    gst::init()?;
+    gst::init().unwrap();
     // An Actix runtime system is created and used to run the server function
-    //  which is defined in the gateway::server module.
+    //  which is defined in the gateway::server module
     let system = actix_rt::System::new();
     system.block_on(gateway::server::run(cfg))?;
 
@@ -249,7 +249,7 @@ impl eframe::App for MyApp {
                         // Call a function when the button is clicked
                         self.age += 1;
                         self.version = "version".to_string();
-                        rust_greeting();
+                        // rust_greeting();
                     }
                     if ui.button("Start Server").clicked() {
                         // Check if the server is already running

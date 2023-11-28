@@ -28,7 +28,7 @@ rm -f app/src/main/jniLibs/arm64-v8a/libmain.so
 
 # Step 2: Build the Rust project with the specified RUSTFLAGS
 # PKG_CONFIG_ALLOW_CROSS=1 RUSTFLAGS="-lffi" cargo apk build
-PKG_CONFIG_ALLOW_CROSS=1 RUSTFLAGS="-lffi" cargo ndk -t arm64-v8a -o app/src/main/jniLibs/ build
+PKG_CONFIG_ALLOW_CROSS=1 RUSTFLAGS="-lffi" RUST_BACKTRACE=1 cargo ndk -t arm64-v8a -o app/src/main/jniLibs/ build
 
 export JNI_LIBS="app/src/main/jniLibs/arm64-v8a"
 # mkdir -p app/src/main/jniLibs/arm64-v8a/
@@ -53,7 +53,6 @@ fi
 
 adb shell am start -n co.realfit.agdkeframe/.MainActivity
 # adb logcat | egrep '(agdkeframe|gst)'
-adb logcat | egrep '(actix_web|tracing_actix_web|RustStdoutStderr|main)'
-
+adb logcat | egrep '(actix_web|tracing_actix_web|RustStdoutStderr|main    :)'
 # logcat output by the tags "main" and "RustStdoutStderr",
 # adb logcat -s main RustStdoutStderr
