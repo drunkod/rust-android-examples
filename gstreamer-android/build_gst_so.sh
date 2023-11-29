@@ -7,6 +7,10 @@ DATE=`date "+%Y%m%d-%H%M%S"`
 echo $VERSION
 export GSTREAMER_ROOT_ANDROID=/home/alex/Загрузки/gstreamer-1.0-android-universal-${VERSION}
 
+  # removes files with names matching the pattern *pc-e* from the pkgconfig directory
+  rm -rf gst-android-build
+  rm -rf src
+
 # Check if the GSTREAMER_ROOT_ANDROID environment variable is defined
 if [[ -z "${GSTREAMER_ROOT_ANDROID}" ]]; then
   echo "You must define an environment variable called GSTREAMER_ROOT_ANDROID and point it to the folder where you extracted the GStreamer binaries"
@@ -55,8 +59,8 @@ do
 
   cd ../../../
   # Create the output directory and copy the processed library
-  mkdir -p ./out/Gstreamer-$VERSION/lib/$LIB/
-  cp -r ${GST_LIB}/${LIB}/libgstreamer_android.so  ./out/Gstreamer-$VERSION/lib/$LIB/
+  mkdir -p ./out/Gstreamer-$VERSION-$DATE/lib/$LIB/
+  cp -r ${GST_LIB}/${LIB}/libgstreamer_android.so  ./out/Gstreamer-$VERSION-$DATE/lib/$LIB/
 
   cp -r ${GST_LIB}/${LIB}/libgstreamer_android.so ${GST_LIB}/${LIB}/lib/
     cp -r ${GST_LIB}/${LIB}/gstreamer_android.c ${GST_LIB}/${LIB}/lib/
