@@ -1,20 +1,20 @@
 mod gateway;
 mod nodes;
 mod utils;
-mod common;
+// mod common;
 
 use anyhow::{anyhow, Error};
 use structopt::StructOpt;
 
 use crate::gateway::config::Config;
 
-use tracing_subscriber::prelude::*;
+// use tracing_subscriber::prelude::*;
 
 use std::fs;
 
 
 use std::{env, process};
-use gst::{prelude::*};
+use gst::prelude::*;
 use log::{debug};
 //add RUSTFLAGS="-lffi" with error dlopen failed: cannot locate symbol "ffi_type_void" referenced by
 
@@ -210,7 +210,7 @@ fn start_server(cfg: Config) -> Result<(), Error> {
     gst::init().unwrap();
     // An Actix runtime system is created and used to run the server function
     //  which is defined in the gateway::server module
-    let system = actix_rt::System::new();
+    let system: actix::prelude::SystemRunner = actix_rt::System::new();
     system.block_on(gateway::server::run(cfg))?;
 
     Ok(())
