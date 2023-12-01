@@ -207,7 +207,7 @@ fn start_server(cfg: Config) -> Result<(), Error> {
     //     .with(fmt_layer);
     // tracing::subscriber::set_global_default(subscriber).expect("Failed to set subscriber");
 
-    gst::init().unwrap();
+    gst::init()?;
     // An Actix runtime system is created and used to run the server function
     //  which is defined in the gateway::server module
     let system: actix::prelude::SystemRunner = actix_rt::System::new();
