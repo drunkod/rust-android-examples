@@ -30,3 +30,28 @@ docker cp <containerId>:/vendor/cerbero/gstreamer-1.0-android-universal-1.22.2.t
 
 # Android build
 http://ci.nnstreamer.ai/nnstreamer/ci/daily-build/daily-build.sh
+
+# Android webrtc examples
+https://github.com/GStreamer/gstreamer/tree/main/subprojects/gst-examples
+https://github.com/pexip/gstreamer/blob/main/subprojects/gst-docs/markdown/installing/for-android-development.md
+
+# How add bad plugin faac in 
+
+For example, on Ubuntu or Debian-based systems, you can install FAAC using for X86 for pc:
+
+sudo apt-get install libfaac-dev
+
+On Fedora, CentOS, or RHEL:
+`
+sudo dnf install faac-devel
+
+`
+For android arm64
+
+1. Croscompile with nix pack 
+
+`
+./cerbero-uninstalled build gst-plugins-bad-1.0
+`
+https://github.com/anyrtcIO-Community/anyRTC-RTMP-OpenSource/tree/master/third_party/faac-1.28
+https://github.com/foolely/libfaac-android
