@@ -53,6 +53,6 @@ fi
 
 adb shell am start -n co.realfit.agdkeframe/.MainActivity
 # adb logcat | egrep '(agdkeframe|gst)'
-adb logcat | egrep '(actix_web|tracing_actix_web|RustStdoutStderr|main    :)'
+adb logcat | egrep '(agdkeframe|gst|actix_web|tracing_actix_web|RustStdoutStderr|main    :)'
 # logcat output by the tags "main" and "RustStdoutStderr",
 # adb logcat -s main RustStdoutStderr

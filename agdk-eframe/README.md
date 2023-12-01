@@ -42,6 +42,11 @@ adb logcat -s main RustStdoutStderr
 curl -X POST -H "Content-Type: application/json" -d '{"action":"do_something", "value":10}' http://192.168.3.40:8080/command
 
 ```
+## Commands
+
+```
+`createvideogenerator`, `createsource`, `createdestination`, `createmixer`, `connect`, `start`, `reschedule`, `remove`, `disconnect`, `getinfo`, `addcontrolpoint`, `removecontrolpoint`
+```
 
 ## Error
 
@@ -90,3 +95,17 @@ Successfully created and downcasted video appsrc
 ```
 GSTREAMER_EXTRA_DEPS      := ... gstreamer-app-1.0
 ```
+
+## Error rtmp node crash after send command Start
+
+Create_command with json: Start { id: "centricular-output", cue_time: None, end_time: None }
+
+Ok(Info(Info { nodes: {"centricular-output": Destination(DestinationInfo { family: Rtmp { uri: "rtmps://dc4-1.rtmp.t.me/s/4018499832:im0paW2eEZTVdPI_JN2VaQ" }, audio_slot_id: Some("channel-1->centricular-output_1f2379bb-7bb5-47a5-8d3b-d2ba4717d6eb"), video_slot_id: Some("channel-1->centricular-output_1f2379bb-7bb5-47a5-8d3b-d2ba4717d6eb"), cue_time: None, end_time: None, state: Initial }), "channel-1": Mixer(MixerInfo { slots: {}, video_consumer_slot_ids: Some([]), audio_consumer_slot_ids: Some([]), cue_time: Some(2023-11-30T06:47:51.491984981Z), end_time: None, state: Started, settings: {"fallback-image": String(""), "height": Number(720), "fallback-timeout": Number(500), "sample-rate": Number(44100), "width": Number(1280)}, control_points: {}, slot_settings: {}, slot_control_points: {} })} }))
+
+[alex@fedora agdk-eframe]$ python ../scripts/crossfade.py source_uri dest_uridest_uri
+Ok(Success)
+Ok(Info(Info { nodes: {"channel-1": Mixer(MixerInfo { slots: {}, video_consumer_slot_ids: Some([]), audio_consumer_slot_ids: Some([]), cue_time: Some(2023-11-30T06:47:51.491984981Z), end_time: None, state: Started, settings: {"fallback-image": String(""), "sample-rate": Number(44100), "width": Number(1280), "height": Number(720), "fallback-timeout": Number(500)}, control_points: {}, slot_settings: {}, slot_control_points: {} })} }))
+
+11-30 12:19:48.124  5144  5173 I RustStdoutStderr: #21 Create_command with json: Start { id: "centricular-output", cue_time: None, end_time: None }
+11-30 12:19:48.129  5144  5173 I RustStdoutStderr: RTMP connection established to uri: rtmps://dc4-1.rtmp.t.me/s/4018499832:im0paW2eEZTVdPI_JN2VaQ
+11-30 12:19:48.155  5144  5173 I RustStdoutStderr: Video pipeline successfully linked

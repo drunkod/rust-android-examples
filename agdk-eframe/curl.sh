@@ -6,19 +6,19 @@ make_request() {
 }
 
 # Create Mixer
-# make_request '{"createmixer": {"id": "channel-1", "config": {"width": 1280, "height": 720, "sample-rate": 44100}}}'
+make_request '{"createmixer": {"id": "channel-1", "config": {"width": 1280, "height": 720, "sample-rate": 44100}}}'
 
 # Create Local Playback Destination
 make_request '{"createdestination": {"id": "centricular-output", "family": "LocalPlayback"}}'
 
 # # Connect Mixer to Playback Destination
-# make_request '{"connect": {"link_id": "channel-1", "src_id": "channel-1", "sink_id": "centricular-output"}}'
+make_request '{"connect": {"link_id": "channel-1", "src_id": "channel-1", "sink_id": "centricular-output"}}'
 
 # # Start Playback Destination
-# make_request '{"start": {"id": "centricular-output"}}'
+make_request '{"start": {"id": "centricular-output"}}'
 
 # # Start Mixer
-# make_request '{"start": {"id": "channel-1"}}'
+make_request '{"start": {"id": "channel-1"}}'
 
 # # Schedule Source Slot
 # source_slot=$(make_request '{"schedule_source": {"uri": "'"$source_uri"'", "id": "source_slot", "node_id": "channel-1", "cue_time": 0, "end_time": 10, "slot_config": {"video::zorder": 2, "video::alpha": 1.0, "audio::volume": 1.0, "video::width": 1280, "video::height": 720, "video::sizing-policy": "keep-aspect-ratio"}}}')
