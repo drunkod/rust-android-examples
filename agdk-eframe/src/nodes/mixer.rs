@@ -147,8 +147,9 @@ impl VideoOutput {
             "" => {
                 let vsrc = make_element("videotestsrc", None)?;
                 vsrc.set_property("is-live", &true);
-                vsrc.set_property_from_str("pattern", "black");
-
+                // vsrc.set_property_from_str("pattern", "black");
+                //rainbow test screen
+                vsrc.set_property_from_str("pattern", "smpte");
                 bin.add(&vsrc)?;
 
                 gst::GhostPad::with_target( &vsrc.static_pad("src").unwrap()).unwrap()
