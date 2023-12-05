@@ -23,6 +23,9 @@ use crate::utils::{
     StopManagerMessage, StreamProducer, WaitForEosMessage,
 };
 
+
+use gio::TlsCertificateFlags; // This is the enum you want to use
+
 /// Represents a potential connection to a producer
 struct ConsumerSlot {
     /// Identifier of the slot
@@ -200,7 +203,11 @@ impl Destination {
         self.pipeline.add_many(&[&mux, &mux_queue, &sink])?;
 
         sink.set_property("location", uri);
-
+        // Add off tls-validation rtmps:// for telegram
+        sink.set_property("tls-validation-flags", &TlsCertificateFlags::NOT_ACTIVATED);
+    
+        // Add debug println here
+        println!("RTMP connection established to uri: {}", uri);
         mux.set_property("streamable", &true);
         mux.set_property("latency", &1000000000u64);
 
@@ -259,15 +266,30 @@ impl Destination {
                 &vparse,
                 &venc_queue,
                 &mux,
-            ])?;
+            ])
+            .and_then(|()| {
+                // Your success action here
+                println!("266 >>>Video pipeline successfully linked");
+                Ok(())
+            })
+            .map_err(|err| anyhow!(
+                "270 >>>> Video pipeline Destination {} must have its audio slot connected before starting: {}",
+                self.id, err
+            ))?; 
+
+            println!("Video pipeline successfully linked");
         }
 
         if let Some(ref appsrc) = self.audio_appsrc {
+            println!("278 >>>>>Audio pipeline successfully linked");
             let aconv = make_element("audioconvert", None)?;
+            println!("280 >>>>>Audio pipeline successfully linked");
             let aresample = make_element("audioresample", None)?;
-            let aenc = make_element("faac", None)?;
+            println!("282 >>>>>Audio pipeline successfully linked");
+            let aenc = make_element("avenc_aac", None)?;
+            println!("284 >>>>>Audio pipeline successfully linked");
             let aenc_queue = make_element("queue", None)?;
-
+            println!("286 >>>>>Audio pipeline successfully linked");
             self.pipeline.add_many(&[
                 appsrc.upcast_ref(),
                 &aconv,
@@ -290,6 +312,8 @@ impl Destination {
                 &aenc_queue,
                 &mux,
             ])?;
+
+            println!("Audio pipeline successfully linked");
         }
 
         self.connect_consumers()?;
@@ -301,6 +325,7 @@ impl Destination {
                 let s = sink.property::<gst::Structure>("stats");
 
                 trace!(id = %id_clone, "rtmp destination statistics: {}", s.to_string());
+                println!("307 >>> RTMP destination statistics: {}", s.to_string());
             }
         });
 
@@ -312,10 +337,21 @@ impl Destination {
                     "Failed to start destination {}: {}",
                     id, err
                 )));
+            } else {
+                // Add debug print statement
+                println!("Pipeline set to Playing state successfully");
             }
         });
 
         Ok(StateChangeResult::Success)
+        // .map(|result| {
+        //     println!("RTMP connect successful: {:?}", result);
+        //     result
+        // })
+        // .map_err(|err| {
+        //     println!("RTMP connect failed: {:?}", err);
+        //     err
+        // })
     }
 
     /// LocalFile family
@@ -363,7 +399,7 @@ impl Destination {
         if let Some(ref appsrc) = self.audio_appsrc {
             let aconv = make_element("audioconvert", None)?;
             let aresample = make_element("audioresample", None)?;
-            let aenc = make_element("faac", None)?;
+            let aenc = make_element("avenc_aac", None)?;
 
             self.pipeline
                 .add_many(&[appsrc.upcast_ref(), &aconv, &aresample, &aenc])?;
