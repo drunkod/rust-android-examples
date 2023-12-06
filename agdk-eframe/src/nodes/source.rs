@@ -1,22 +1,21 @@
-//! A source processing node.
+//! Узел обработки источника.//!
+//! Единственный поддерживаемый тип источника создается с помощью URI. В будущем
+//! Генераторы также могут поддерживаться, например, для отображения обратного отсчета.
 //!
-//! The only supported source type is created with a URI. In the future
-//! generators could also be supported, for example to display a countdown.
+//! Основной сложностью для этого узла является [`starting`](State::Starting)
+//! Особенность: когда узел должен играть в будущем, мы его раскручиваем
+//! встать за 10 секунд до начала. Неживые источники блокируются
+//! by fallbacksrc, который выбирает базовое время только после разблокировки,
+//! и данные, поступающие из живых источников, отбрасываются StreamProducers
+//! пока для них не будет вызвана функция forward().
 //!
-//! The main complexity for this node is the [`starting`](State::Starting)
-//! feature: when the node is scheduled to play in the future, we spin it
-//! up 10 seconds before its cue time. Non-live sources are blocked
-//! by fallbacksrc, which only picks a base time once unblocked,
-//! and data coming from live sources is discarded by the StreamProducers
-//! until forward() is called on them.
-//!
-//! Part of the extra complexity is due to the rescheduling feature:
-//! when rescheduling a prerolling source, we want to tear down the
-//! previous pipeline, but as logical connections are tracked by the
-//! StreamProducer elements, we want to keep their lifecycle tied to
-//! that of the source. This means appsinks may be removed from an old
-//! pipeline and moved to a new one, this is safe but needs to be kept
-//! in mind.
+//! Часть дополнительной сложности связана с функцией изменения расписания:
+//! При перепланировании источника прероллинга мы хотим снести
+//! предыдущий конвейер, но поскольку логические соединения отслеживаются
+//! элементы StreamProducer, мы хотим сохранить их жизненный цикл привязанным к
+//! что и в источнике. Это означает, что ссылки на приложения могут быть удалены из старых
+//! трубопровод и переместился на новый, он безопасен, но его нужно сохранить
+//! в памяти.
 
 use super::node::{
     AddControlPointMessage, GetNodeInfoMessage, GetProducerMessage, NodeManager, NodeStatusMessage,
@@ -33,11 +32,12 @@ use chrono::{DateTime, Utc};
 use gst::prelude::*;
 use tracing::{debug, error, instrument, trace};
 
-/// The pipeline and various GStreamer elements that the source
-/// optionally wraps, their lifetime is not directly bound to that
-/// of the source itself
+/// Конвейер и различные элементы GStreamer, которые источник
+/// по желанию обертывает, их время жизни не привязано напрямую к этому
+/// самого источника
 #[derive(Debug)]
 struct Media {
+    /// Обернутый трубопровод
     /// The wrapped pipeline
     pipeline: gst::Pipeline,
     /// A helper for managing the pipeline
@@ -73,9 +73,12 @@ pub struct Source {
 }
 
 impl Source {
+     // Constructor to create a new source.
     /// Create a source
     #[instrument(level = "debug", name = "creating")]
     pub fn new(id: &str, uri: &str, audio: bool, video: bool) -> Self {
+        // Initialize audio and video producers based on configuration.
+        // Other properties are set to default values.        
         let audio_producer = if audio {
             Some(StreamProducer::from(
                 &gst::ElementFactory::make("appsink")
@@ -112,8 +115,8 @@ impl Source {
             state_machine: StateMachine::default(),
         }
     }
-
-    /// Connect pads exposed by `fallbacksrc` to our output producers
+    // Method to connect pads exposed by `fallbacksrc` to output producer
+    /// Подключите колодки, открытые `fallbacksrc`, к нашим производителям вывода
     #[instrument(level = "debug", name = "connecting", skip(pipeline, is_video, pad, video_producer, audio_producer), fields(pad = %pad.name()))]
     fn connect_pad(
         id: String,
@@ -123,6 +126,8 @@ impl Source {
         video_producer: &Option<StreamProducer>,
         audio_producer: &Option<StreamProducer>,
     ) -> Result<Option<gst::Element>, Error> {
+        // Handle pad connections based on audio or video type.
+        // Управление подключениями пэдов в зависимомти от типа аудио или видео
         if is_video {
             if let Some(video_producer) = video_producer {
                 let deinterlace = make_element("deinterlace", None)?;
@@ -167,7 +172,7 @@ impl Source {
         }
     }
 
-    /// Preroll the pipeline ahead of time (by default 10 seconds before cue time)
+    /// Прокрутите pipeline трубопровод заранее (по умолчанию за 10 секунд до начала сигнала).
     #[instrument(level = "debug", name = "prerolling", skip(self, ctx), fields(id = %self.id))]
     fn preroll(&mut self, ctx: &mut Context<Self>) -> Result<StateChangeResult, Error> {
         // let pipeline = gst::Pipeline::new(Some(&self.id.to_string()));
@@ -286,7 +291,7 @@ impl Source {
         Ok(StateChangeResult::Success)
     }
 
-    /// Unblock a prerolling pipeline
+    /// Разблокируйте трубопровод прероллинга
     #[instrument(level = "debug", name = "unblocking", skip(self), fields(id = %self.id))]
     fn unblock(&mut self, ctx: &mut Context<Self>) -> Result<StateChangeResult, Error> {
         let media = self.media.as_ref().unwrap();
@@ -496,7 +501,7 @@ impl Schedulable<Self> for Source {
 /// Sent by the [`Source`] to notify itself that a stream started or ended
 #[derive(Debug)]
 struct StreamMessage {
-    /// Whether the stream is starting or ending
+    /// Начинается или заканчивается поток
     starting: bool,
 }
 
@@ -554,7 +559,7 @@ impl Handler<ErrorMessage> for Source {
     }
 }
 
-/// Sent by the [`Source`] to notify itself that a new `fallbackswitch`
+/// Отправляется [Источником], чтобы уведомить себя о том, что новый `fallbackswitch`
 /// was added in `fallbacksrc`
 #[derive(Debug)]
 struct NewSwitchMessage(gst::Element);
@@ -590,7 +595,7 @@ impl Handler<NewSourceBinMessage> for Source {
     }
 }
 
-/// Sent by the [`Source`] to notify itself that the status of one
+/// Отправляется [`Источником`], чтобы уведомить себя о том, что статус одного
 /// of the monitored elements changed
 #[derive(Debug)]
 struct SourceStatusMessage;
