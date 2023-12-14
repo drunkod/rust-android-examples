@@ -1,5 +1,8 @@
 Remote aweasome gstreamer:
 
+Notes:
+https://github.com/huddlesklar/notes/tree/master/multimedia/gstreamer
+
 Basic:
 https://gstreamer.freedesktop.org/documentation/application-development/advanced/pipeline-manipulation.html
 https://gstreamer.freedesktop.org/documentation/tutorials/basic/dynamic-pipelines.html

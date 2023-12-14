@@ -2,11 +2,12 @@ export ANDROID_HOME=/home/alex/Android/Sdk
 export NDK_HOME=$ANDROID_HOME/ndk/21.4.7075529
 # export NDK_HOME=$ANDROID_HOME/ndk/25.2.9519653
 # Set the version and date
-VERSION=1.22.5
+VERSION=1.22.7
 DATE=`date "+%Y%m%d-%H%M%S"`
 echo $VERSION
-export GSTREAMER_ROOT_ANDROID=/home/alex/Загрузки/gstreamer-1.0-android-universal-${VERSION}
-
+# export PKG_CONFIG_PATH=$PKG_CONFIG_PATH:/nix/store/6czxkwcga5x2raqswhxpqc47ycdr7d40-user-environment/lib/pkgconfig
+# export GSTREAMER_ROOT_ANDROID=/home/alex/Загрузки/gstreamer-1.0-android-universal-${VERSION}
+export GSTREAMER_ROOT_ANDROID=/home/alex/Загрузки/gstreamer-1.0-android-arm64-${VERSION}
   # removes files with names matching the pattern *pc-e* from the pkgconfig directory
   rm -rf gst-android-build
   rm -rf src

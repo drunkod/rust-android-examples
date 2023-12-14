@@ -1,3 +1,23 @@
+## TODO
+
+- [ ] Support newer Android SDK's
+- [ ] Support different GStreamer versions
+- [ ] How create cerbero recipe
+- [ ] Add docker repo builder for custom cerbero recipe
+- [ ] Add srt receiver
+- [ ] Add diagram how work rtmp distanathion
+- [ ] Synchronized Audio
+- [ ] How Working app in background (freeze video bitrate from 2000kb to 300-500kb )
+- [ ] Add image from base64 encode, from memory without storage
+- [ ] research ges-launch-1.0 --load project.xges -o project.mp4 # encode
+
+https://www.jamesh.id.au/talks/plug-2021-05/ges-slides.pdf
+rendered to a video from presentation
+https://github.com/plugorgau/bbb-render
+
+ RTP Server for Broadcasting Network-Clock Synchronized Audio
+https://github.com/zweiund40GmbH/micast-broadcaster
+
 This tests using `GameActivity` with egui, winit and wgpu.
 
 This is based on a re-worked winit backend here:

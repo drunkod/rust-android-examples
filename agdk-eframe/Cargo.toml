@@ -46,7 +46,7 @@ gst = { version = "0.21.2", package = "gstreamer", default-features = false }
 # gst-rtsp-server = { package = "gstreamer-rtsp-server", optional = true }
 # gst-allocators = { package = "gstreamer-allocators", optional = true }
 # gio = { git = "https://github.com/gtk-rs/gtk-rs-core", optional = true }
-
+# gio = "0.13"
 # [dependencies]
 anyhow = "1" 
 # gst = {package = "gstreamer", version = "0.20.5"}
@@ -54,7 +54,9 @@ gst-base = { package = "gstreamer-base", version = "0.21.2"}
 gst-app = { package = "gstreamer-app" , version = "0.21.2"}
 gst-video = { package = "gstreamer-video",  version = "0.21.2"}
 gst-utils = { package = "gstreamer-utils", version = "0.21.2"}
-glib = "0.18.3"
+gst-plugin-fallbackswitch = "0.11.2"
+# glib = "0.18.3"
+gio = "0.18.3"
 futures = "0.3"
 tokio = { version = "1.6.1", features = ["time", "test-util"] }
 actix = "0.13"
@@ -119,5 +121,4 @@ build_targets = [ "aarch64-linux-android" ]
 # See: https://developer.android.com/guide/topics/manifest/activity-element#screen
 orientation = "portrait"
 
-runtime_libs = "/home/runner/work/rust-android-examples/rust-android-examples/agdk-eframe/app/src/main/jniLibs"
-
+runtime_libs = "/home/alex/Документы/android/rust-android-examples/agdk-eframe/app/src/main/jniLibs"
