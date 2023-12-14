@@ -1762,6 +1762,25 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "ad0a93d233ebf96623465aad4046a8d3aa4da22d4f4beba5388838c8a434bbb4"
 
 [[package]]
+name = "gio"
+version = "0.18.3"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "47d809baf02bdf1b5ef4ad3bf60dd9d4977149db4612b7bbb58e56aef168193b"
+dependencies = [
+ "futures-channel",
+ "futures-core",
+ "futures-io",
+ "futures-util",
+ "gio-sys",
+ "glib",
+ "libc",
+ "once_cell",
+ "pin-project-lite",
+ "smallvec",
+ "thiserror",
+]
+
+[[package]]
 name = "gio-sys"
 version = "0.18.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1972,6 +1991,30 @@ dependencies = [
 ]
 
 [[package]]
+name = "gst-plugin-fallbackswitch"
+version = "0.11.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "0a05696424a36202c492b0842d07a30749c9ada044425224458818c0521f723e"
+dependencies = [
+ "gst-plugin-version-helper",
+ "gstreamer",
+ "gstreamer-audio",
+ "gstreamer-base",
+ "gstreamer-video",
+ "parking_lot",
+]
+
+[[package]]
+name = "gst-plugin-version-helper"
+version = "0.8.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "334c37a15ca23861ad8159c8ff6e20f011aa2000defc5c9159096a28842f811b"
+dependencies = [
+ "chrono",
+ "toml_edit 0.20.7",
+]
+
+[[package]]
 name = "gstreamer"
 version = "0.21.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2018,6 +2061,34 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "aea07f07a3f17278e6998390ecaea127e476f0af0360c2d83d96e6d3a97fb75e"
 dependencies = [
  "glib-sys",
+ "gstreamer-base-sys",
+ "gstreamer-sys",
+ "libc",
+ "system-deps",
+]
+
+[[package]]
+name = "gstreamer-audio"
+version = "0.21.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "36d1678eacb7677c1ffdcf220ada416b5fb68e87c33b77319f14bba169fbe3fc"
+dependencies = [
+ "cfg-if",
+ "glib",
+ "gstreamer",
+ "gstreamer-audio-sys",
+ "gstreamer-base",
+ "libc",
+]
+
+[[package]]
+name = "gstreamer-audio-sys"
+version = "0.21.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "78bd94ae8b177377855b38c3d809c686526786cdb771e6d68510509634b955d1"
+dependencies = [
+ "glib-sys",
+ "gobject-sys",
  "gstreamer-base-sys",
  "gstreamer-sys",
  "libc",
@@ -2557,7 +2628,8 @@ dependencies = [
  "egui_demo_lib",
  "env_logger",
  "futures",
- "glib",
+ "gio",
+ "gst-plugin-fallbackswitch",
  "gstreamer",
  "gstreamer-app",
  "gstreamer-base",

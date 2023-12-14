@@ -29,6 +29,7 @@ public class MainActivity extends GameActivity {
         // System.loadLibrary("crypto");
         // System.loadLibrary("ssl");
         System.loadLibrary("gstreamer_android");
+        System.loadLibrary("gstfallbackswitch");
         // Load the native library.
         // The name "android-game" depends on your CMake configuration, must be
         // consistent here and inside AndroidManifect.xml

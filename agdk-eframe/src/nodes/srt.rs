@@ -182,7 +182,7 @@ impl Source {
 
         let src = make_element("fallbacksrc", None)?;
         pipeline.add(&src)?;
-        println!("185 >>>>>>>src.set_property to uri: {}", &self.uri);
+
         src.set_property("uri", &self.uri);
         src.set_property("manual-unblock", &true);
         src.set_property("immediate-fallback", &true);
@@ -256,7 +256,6 @@ impl Source {
                 addr.do_send(NewSourceBinMessage(element.clone()));
             }
         });
-        println!("259 now prerolling to uri: {}", &self.uri);
 
         debug!("now prerolling");
 
@@ -283,7 +282,7 @@ impl Source {
                 id, err
             )));
         }
-        println!("285 ok prerolling to uri: {}", &self.uri);
+
         Ok(StateChangeResult::Success)
     }
 

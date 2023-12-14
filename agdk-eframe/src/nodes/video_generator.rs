@@ -140,7 +140,8 @@ impl VideoGenerator {
 
         src.set_property("flip", &true);
         src.set_property("is-live", &true);
-        src.set_property("pattern", &"ball");
+        src.set_property_from_str("pattern", "ball");
+        
         // src.set_property("enable-video", &self.video_producer.is_some());
 
         let pipeline_clone = pipeline.downgrade();

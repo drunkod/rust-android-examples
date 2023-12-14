@@ -224,6 +224,10 @@ pub enum DestinationFamily {
         /// The URI of the server
         uri: String,
     },
+    Udp {
+        /// The Host of the server
+        host: String,
+    },
     /// Stream to a local file. No control is currently offered for determining
     /// the encoding and container format, the topology of the output file will
     /// be an H264 stream and an AAC stream in a MP4 container.

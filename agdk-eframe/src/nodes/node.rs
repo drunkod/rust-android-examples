@@ -411,12 +411,15 @@ impl NodeManager {
 
         let source = Source::new(id, uri, audio, video);
         let source_addr = source.start();
+        println!("source_addr source id: {:?}", source_addr);
 
         self.nodes
             .insert(id.to_string(), Node::Source(source_addr.clone()));
 
         self.producers
             .insert(id.to_string(), source_addr.recipient());
+
+        println!("421 >>>>>>> Created source id: {}", id);        
 
         trace!("Created source {}", id);
 

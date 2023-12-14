@@ -354,6 +354,175 @@ impl Destination {
         // })
     }
 
+    /// UDP family
+    #[instrument(level = "debug", name = "playing on UDP local devices", skip(self, ctx), fields(id = %self.id))]
+    fn start_udp_pipeline(
+        &mut self,
+        ctx: &mut Context<Self>,
+        host: &str,
+    ) -> Result<StateChangeResult, Error> {
+        let mux = make_element("mpegtsmux", None)?;
+        let mux_queue = make_element("queue", None)?;
+        let sink = make_element("udpsink", None)?;
+
+        self.pipeline.add_many(&[&mux, &mux_queue, &sink])?;
+
+        // if let Ok((host, port)) = parse_udp_uri(uri) {
+        //     sink.set_property("host", &host);
+        //     sink.set_property("port", &port);
+        // } else {
+        //     return Err(anyhow!("Invalid UDP URI: {}", uri));
+        // }
+        // Set the host and port properties directly
+        sink.set_property("host", host);
+        sink.set_property("port", &(5005i32));
+
+        // sink.set_property("location", uri);
+    
+
+        // Add debug println here
+        println!("UDP connection established to host: {}", host);
+        // println!("UDP connection established to uri: {}", uri);
+        mux.set_property("alignment", &(7i32));
+        // mux.set_property("streamable", &true);
+        // mux.set_property("latency", &1000000000u64);
+
+        // mux.set_property(
+        //     "start-time-selection",
+        //     gst_base::AggregatorStartTimeSelection::First,
+        // );
+
+        gst::Element::link_many(&[&mux, &mux_queue, &sink])?;
+
+        if let Some(ref appsrc) = self.video_appsrc {
+            let vconv = make_element("videoconvert", None)?;
+            let timecodestamper = make_element("timecodestamper", None)?;
+            let timeoverlay = make_element("timeoverlay", None)?;
+            let venc = make_element("nvh264enc", None).unwrap_or(make_element("x264enc", None)?);
+            let vparse = make_element("h264parse", None)?;
+            let venc_queue = make_element("queue", None)?;
+
+            self.pipeline.add_many(&[
+                appsrc.upcast_ref(),
+                &vconv,
+                &timecodestamper,
+                &timeoverlay,
+                &venc,
+                &vparse,
+                &venc_queue,
+            ])?;
+
+            if venc.has_property("tune", None) {
+                venc.set_property_from_str("tune", "zerolatency");
+            } else if venc.has_property("zerolatency", None) {
+                venc.set_property("zerolatency", &true);
+            }
+
+            if venc.has_property("key-int-max", None) {
+                venc.set_property("key-int-max", &30u32);
+            } else if venc.has_property("gop-size", None) {
+                venc.set_property("gop-size", &30i32);
+            }
+
+            vparse.set_property("config-interval", &-1i32);
+            timecodestamper.set_property_from_str("source", "rtc");
+            timeoverlay.set_property_from_str("time-mode", "time-code");
+            venc_queue.set_properties(&[
+                ("max-size-buffers", &0u32),
+                ("max-size-bytes", &0u32),
+                ("max-size-time", &(3 * gst::ClockTime::SECOND)),
+            ]);
+
+            gst::Element::link_many(&[
+                appsrc.upcast_ref(),
+                &vconv,
+                &timecodestamper,
+                &timeoverlay,
+                &venc,
+                &vparse,
+                &venc_queue,
+                &mux,
+            ])
+            .and_then(|()| {
+                // Your success action here
+                println!("266 >>>Video pipeline successfully linked");
+                Ok(())
+            })
+            .map_err(|err| anyhow!(
+                "270 >>>> Video pipeline Destination {} must have its audio slot connected before starting: {}",
+                self.id, err
+            ))?; 
+
+            println!("Video pipeline successfully linked");
+        }
+
+        if let Some(ref appsrc) = self.audio_appsrc {
+            println!("278 >>>>>Audio pipeline successfully linked");
+            let aconv = make_element("audioconvert", None)?;
+            println!("280 >>>>>Audio pipeline successfully linked");
+            let aresample = make_element("audioresample", None)?;
+            println!("282 >>>>>Audio pipeline successfully linked");
+            let aenc = make_element("avenc_aac", None)?;
+            println!("284 >>>>>Audio pipeline successfully linked");
+            let aenc_queue = make_element("queue", None)?;
+            println!("286 >>>>>Audio pipeline successfully linked");
+            self.pipeline.add_many(&[
+                appsrc.upcast_ref(),
+                &aconv,
+                &aresample,
+                &aenc,
+                &aenc_queue,
+            ])?;
+
+            aenc_queue.set_properties(&[
+                ("max-size-buffers", &0u32),
+                ("max-size-bytes", &0u32),
+                ("max-size-time", &(3 * gst::ClockTime::SECOND)),
+            ]);
+
+            gst::Element::link_many(&[
+                appsrc.upcast_ref(),
+                &aconv,
+                &aresample,
+                &aenc,
+                &aenc_queue,
+                &mux,
+            ])?;
+
+            println!("Audio pipeline successfully linked");
+        }
+
+        self.connect_consumers()?;
+
+        let sink_clone = sink.downgrade();
+        let id_clone = self.id.clone();
+        ctx.run_interval(std::time::Duration::from_secs(1), move |_s, _ctx| {
+            if let Some(sink) = sink_clone.upgrade() {
+                let s = sink.property::<gst::Structure>("stats");
+
+                trace!(id = %id_clone, "udp destination statistics: {}", s.to_string());
+                println!("503 >>> UDP destination statistics: {}", s.to_string());
+            }
+        });
+
+        let addr = ctx.address();
+        let id = self.id.clone();
+        self.pipeline.call_async(move |pipeline| {
+            if let Err(err) = pipeline.set_state(gst::State::Playing) {
+                addr.do_send(ErrorMessage(format!(
+                    "Failed to start destination {}: {}",
+                    id, err
+                )));
+            } else {
+                // Add debug print statement
+                println!("Pipeline set to Playing state successfully");
+            }
+        });
+
+        Ok(StateChangeResult::Success)
+
+    }
+
     /// LocalFile family
     #[instrument(level = "debug", name = "saving to local file", skip(self, ctx), fields(id = %self.id))]
     fn start_local_file_pipeline(
@@ -637,6 +806,7 @@ impl Schedulable<Self> for Destination {
                     max_size_time,
                 } => self.start_local_file_pipeline(ctx, &base_name, max_size_time),
                 DestinationFamily::LocalPlayback => self.start_local_playback_pipeline(ctx),
+                DestinationFamily::Udp { host }  => self.start_udp_pipeline(ctx, &host),
             },
             State::Started => Ok(StateChangeResult::Success),
             State::Stopping => {
