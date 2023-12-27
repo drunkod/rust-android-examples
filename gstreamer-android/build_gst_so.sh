@@ -1,8 +1,14 @@
 export ANDROID_HOME=/home/alex/Android/Sdk
-export NDK_HOME=$ANDROID_HOME/ndk/21.4.7075529
+export NDK_HOME=$ANDROID_HOME/ndk/25.2.9519653
+# export NDK_HOME=$ANDROID_HOME/ndk/21.4.7075529
+
+VERSION=1.23.0.1
+
+export PKG_CONFIG_PATH=/home/alex/Загрузки/gstreamer-1.0-android-arm64-${VERSION}/arm64/lib/pkgconfig
+# export PKG_CONFIG_PATH=/nix/store/31s9l69j5n3q8kj39y75lpq2xp80vrm1-user-environment/lib/pkgconfig:/home/alex/Загрузки/gstreamer-1.0-android-arm64-${VERSION}/arm64/lib/pkgconfig
+
 # export NDK_HOME=$ANDROID_HOME/ndk/25.2.9519653
 # Set the version and date
-VERSION=1.22.7
 DATE=`date "+%Y%m%d-%H%M%S"`
 echo $VERSION
 # export PKG_CONFIG_PATH=$PKG_CONFIG_PATH:/nix/store/6czxkwcga5x2raqswhxpqc47ycdr7d40-user-environment/lib/pkgconfig
