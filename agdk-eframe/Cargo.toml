@@ -29,7 +29,7 @@ jni = { version = "0.5", default-features = false }
 # gst = { version = "0.21.2", package = "gstreamer", default-features = false }
 log = { version = "0.4.18", default-features = false }
 # glib = { git = "https://github.com/gtk-rs/gtk-rs-core" }
-gst = { version = "0.21.2", package = "gstreamer", default-features = false }
+gst = { version = "0.21.3", package = "gstreamer", default-features = false }
 # gst-gl = { package = "gstreamer-gl",  optional = true }
 # gst-gl-egl = { package = "gstreamer-gl-egl", optional = true }
 # gst-gl-x11 = { package = "gstreamer-gl-x11", optional = true }
@@ -52,11 +52,12 @@ anyhow = "1"
 # gst = {package = "gstreamer", version = "0.20.5"}
 gst-base = { package = "gstreamer-base", version = "0.21.2"}
 gst-app = { package = "gstreamer-app" , version = "0.21.2"}
+gst-audio = { package = "gstreamer-audio" , version = "0.21.3"}
 gst-video = { package = "gstreamer-video",  version = "0.21.2"}
 gst-utils = { package = "gstreamer-utils", version = "0.21.2"}
-gst-plugin-fallbackswitch = "0.11.2"
-# glib = "0.18.3"
-gio = "0.18.3"
+# gst-plugin-fallbackswitch = "0.11.2"
+glib = "0.18.4"
+gio = "0.18.4"
 futures = "0.3"
 tokio = { version = "1.6.1", features = ["time", "test-util"] }
 actix = "0.13"
@@ -87,7 +88,7 @@ auteur-controlling = { path = "src/common" }
 [dev-dependencies]
 tempfile = "3.2.0"
 
-[build]
+#[build]
 # rustflags = ["-lffi", "-C", "link-args=-lunwind"]
 
 [lib]

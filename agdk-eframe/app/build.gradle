@@ -23,10 +23,10 @@ android {
         }
         debug {
             minifyEnabled false
-            //packagingOptions {
-            //    doNotStrip '**/*.so'
-            //}
-            //debuggable true
+            packagingOptions {
+                doNotStrip '**/*.so'
+            }
+            debuggable true
         }
     }
     compileOptions {
