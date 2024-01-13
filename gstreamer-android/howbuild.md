@@ -55,3 +55,6 @@ For android arm64
 `
 https://github.com/anyrtcIO-Community/anyRTC-RTMP-OpenSource/tree/master/third_party/faac-1.28
 https://github.com/foolely/libfaac-android
+
+good wiki gstreamer:
+https://www.francescpinyol.cat/gstreamer.html
