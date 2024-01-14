@@ -1,9 +1,12 @@
 mod gateway;
 mod nodes;
 mod utils;
+use crate::utils::{
+    make_element
+};
 // mod common;
-
-use anyhow::{anyhow, Error};
+use std::error::Error;
+use anyhow::{anyhow, bail, Error as Errors};
 use structopt::StructOpt;
 
 use crate::gateway::config::Config;
@@ -15,6 +18,7 @@ use std::fs;
 
 use std::{env, process};
 use gst::prelude::*;
+use gst::ElementFactory;
 use log::{debug};
 //add RUSTFLAGS="-lffi" with error dlopen failed: cannot locate symbol "ffi_type_void" referenced by
 
@@ -93,76 +97,163 @@ impl MyApp {
         }
     }
 }
-
 // #[no_mangle]
-// pub extern fn rust_greeting() {
-//     // Get a string containing the passed pipeline launch syntax audiotestsrc wave=saw freq=205 ! autoaudiosink
-//     let pipeline_str = "audiotestsrc wave=saw freq=205 ! autoaudiosink";
-    
-//     // gst::init().unwrap();
-//     let gst_version_string = gst::version_string();
-    
-//     // Let GStreamer create a pipeline from the parsed launch syntax on the cli.
-//     // In comparison to the launch_glib_main example, this is using the advanced launch syntax
-//     // parsing API of GStreamer. The function returns a Result, handing us the pipeline if
-//     // parsing and creating succeeded, and hands us detailed error information if something
-//     // went wrong. The error is passed as gst::ParseError. In this example, we separately
-//     // handle the NoSuchElement error, that GStreamer uses to notify us about elements
-//     // used within the launch syntax, that are not available (not installed).
-//     // Especially GUIs should probably handle this case, to tell users that they need to
-//     // install the corresponding gstreamer plugins.
-
-//     let mut context = gst::ParseContext::new();
-//     let pipeline =
-//         match gst::parse_launch_full(&pipeline_str, Some(&mut context), gst::ParseFlags::empty()) {
-//             Ok(pipeline) => pipeline,
-//             Err(err) => {
-//                 if let Some(gst::ParseError::NoSuchElement) = err.kind::<gst::ParseError>() {
-//                     println!("Missing element(s): {:?}", context.missing_elements());
-//                 } else {
-//                     println!("Failed to parse pipeline: {err}")
-//                 }
-
-//                 return
-//             }
-//         };
-//     let bus = pipeline.bus().unwrap();
-
-//     pipeline
-//         .set_state(gst::State::Playing)
-//         .expect("Unable to set the pipeline to the `Playing` state");
-
-//     for msg in bus.iter_timed(gst::ClockTime::NONE) {
-//         use gst::MessageView;
-
-//         match msg.view() {
-//             MessageView::Eos(..) => break,
-//             MessageView::Error(err) => {
-//                 println!(
-//                     "Error from {:?}: {} ({:?})",
-//                     err.src().map(|s| s.path_string()),
-//                     err.error(),
-//                     err.debug()
-//                 );
-//                 break;
-//             }
-//             _ => (),
-//         }
+// pub extern fn rust_greeting()-> Result<(), Box<dyn Error>> {
+//         // Initialize GStreamer
+//         gst::init().map_err(|err| {
+//             eprintln!("Failed to initialize GStreamer: {}", err);
+//             err
+//         })?;
+//         Ok(())
 //     }
 
-//     pipeline
-//         .set_state(gst::State::Null)
-//         .expect("Unable to set the pipeline to the `Null` state");
+// Check if all GStreamer plugins we require are available
+#[no_mangle]
+fn check_plugins() -> Result<(), anyhow::Error> {
+    let needed = [
+        "srt",
+        "gio",
+        "fallbacksrc",
+        "fallbackswitch",
+        "videotestsrc",
+        "audiotestsrc",
+        "videoconvert",
+        "audioconvert",
+        "autodetect",
+        "opus",
+        "vpx",
+        "webrtc",
+        "nice",
+        "dtls",
+        "srtp",
+        "rtpmanager",
+        "rtp",
+        "playback",
+        "videoconvertscale",
+        "audioresample",
+    ];
 
-//     debug!("Using {} as player", gst::version_string());
+    let registry = gst::Registry::get();
+    let missing = needed
+        .iter()
+        .filter(|n| registry.find_plugin(n).is_none())
+        .cloned()
+        .collect::<Vec<_>>();
+
+    if !missing.is_empty() {
+        bail!("Missing plugins: {:?}", missing);
+    } else {
+        Ok(())
+    }
+}
+
+#[no_mangle]
+pub extern fn rust_greeting() {
+
+    // Get a string containing the passed pipeline launch syntax audiotestsrc wave=saw freq=205 ! autoaudiosink
+    // let pipeline_str = "audiotestsrc wave=saw freq=205 ! autoaudiosink";
+    let pipeline_str = "giosrc location=smb://othercomputer/demo.mp3 ! decodebin ! audioconvert ! audioresample ! autoaudiosink";
+    //gst-launch-1.0 souphttpsrc location=https://ice6.somafm.com/live-32-aac ssl-strict=false ! decodebin ! autoaudiosink
+    // let pipeline_str = "souphttpsrc location=https://ice6.somafm.com/live-32-aac ssl-strict=false ! decodebin3 ! audioconvert ! audioresample ! autoaudiosink";
+    // let pipeline_str = "souphttpsrc location=https://ice6.somafm.com/live-32-aac ssl-strict=false ! decodebin ! srtsink uri=srt://192.168.3.40:8888";
+        // Initialize GStreamer
+        gst::init().unwrap();
+
+        check_plugins().unwrap();
+
+        // println!("127>>>>>>>>>giosrc pipeline: {giosrc}");
+
+    // let pipeline_str = "videotestsrc ! video/x-raw, height=360, width=640 ! \
+    //     videoconvert ! clockoverlay font-desc='Sans, 48' ! x264enc tune=zerolatency ! \
+    //     video/x-h264, profile=high ! queue ! mpegtsmux name=mux ! srtclientsink uri=srt://:8889 \
+    //     souphttpsrc location=http://gstreamer.freedesktop.org/media/small/dark.441-16-s.flac ssl-strict=false ! flacparse ! flacdec ! audioconvert ! audioresample ! queue min-threshold-buffers=10 ! audio/x-raw,rate=48000 ! \
+    //     avenc_aac bitrate=96000 ! audio/mpeg ! aacparse ! audio/mpeg, mpegversion=4 ! mux.";
+    // let pipeline_str = "videotestsrc ! video/x-raw, height=360, width=640 ! \
+    //     videoconvert ! clockoverlay font-desc='Sans, 48' ! x264enc tune=zerolatency ! \
+    //     video/x-h264, profile=high ! queue ! mpegtsmux name=mux ! srtclientsink uri=srt://:8889 \
+    //     giosrc location=webdav://admin:admin@192.168.3.36:8080/03.mp3 ! mpegaudioparse !  avdec_mp3 ! audioconvert ! audioresample ! queue min-threshold-buffers=10 ! audio/x-raw,rate=48000 ! \
+    //     avenc_aac bitrate=96000 ! audio/mpeg ! aacparse ! audio/mpeg, mpegversion=4 ! mux.";   
     
-//     // let gst_version_string = gst::version_string();
-//     // CString::new(gst::version_string().to_owned()).unwrap().into_raw()
-// }
+    let gst_version_string = gst::version_string();
+    println!("115>>>>>>>>>gst_version_string pipeline: {gst_version_string}");
+    // Let GStreamer create a pipeline from the parsed launch syntax on the cli.
+    // In comparison to the launch_glib_main example, this is using the advanced launch syntax
+    // parsing API of GStreamer. The function returns a Result, handing us the pipeline if
+    // parsing and creating succeeded, and hands us detailed error information if something
+    // went wrong. The error is passed as gst::ParseError. In this example, we separately
+    // handle the NoSuchElement error, that GStreamer uses to notify us about elements
+    // used within the launch syntax, that are not available (not installed).
+    // Especially GUIs should probably handle this case, to tell users that they need to
+    // install the corresponding gstreamer plugins.
+
+    let mut context = gst::ParseContext::new();
+    let pipeline =
+        match gst::parse_launch_full(&pipeline_str, Some(&mut context), gst::ParseFlags::empty()) {
+            Ok(pipeline) => pipeline,
+            Err(err) => {
+                if let Some(gst::ParseError::NoSuchElement) = err.kind::<gst::ParseError>() {
+                    println!("Missing element(s): {:?}", context.missing_elements());
+                } else {
+                    println!("Failed to parse pipeline: {err}")
+                }
+
+                return
+            }
+        };
+    let bus = pipeline.bus().unwrap();
+
+    // pipeline
+    //     .set_state(gst::State::Playing)
+    //     .expect("Unable to set the pipeline to the `Playing` state");
+    match pipeline.set_state(gst::State::Playing) {
+        Ok(gst::StateChangeSuccess::Success) | Ok(gst::StateChangeSuccess::Async) => {
+            // State change succeeded, the pipeline is playing or will be playing shortly
+        },
+        Ok(gst::StateChangeSuccess::NoPreroll) => {
+            // The pipeline is live and does not need to PREROLL, proceed accordingly
+        },
+        Err(err) => {
+            // Handle the error appropriately, e.g., print a message and return from the function
+            eprintln!("Failed to set the pipeline to the `Playing` state: {:?}", err);
+            // If your function returns a Result, you can return an error here
+            return;
+        }
+    }
+
+
+
+    for msg in bus.iter_timed(gst::ClockTime::NONE) {
+        use gst::MessageView;
+
+        match msg.view() {
+            MessageView::Eos(..) => break,
+            MessageView::Error(err) => {
+                println!(
+                    "Error from {:?}: {} ({:?})",
+                    err.src().map(|s| s.path_string()),
+                    err.error(),
+                    err.debug()
+                );
+                break;
+            }
+            _ => (),
+        }
+    }
+
+    pipeline
+        .set_state(gst::State::Null)
+        .expect("Unable to set the pipeline to the `Null` state");
+
+    debug!("Using {} as player", gst::version_string());
+    
+    // let gst_version_string = gst::version_string();
+    // CString::new(gst::version_string().to_owned()).unwrap().into_raw()
+}
 
 /// Application entry point
-fn start_server(cfg: Config) -> Result<(), Error> {
+fn start_server(cfg: Config) -> Result<(), Errors> {
     let cfg = Config::from_args();
+    
     // It initializes a logger with tracing_log::LogTracer::init(). 
     // The logging level is set by the "AUTEUR_LOG" environment variable or 
     // defaults to "warn" if the variable is not set.
@@ -206,7 +297,7 @@ fn start_server(cfg: Config) -> Result<(), Error> {
     //     .with(env_filter)
     //     .with(fmt_layer);
     // tracing::subscriber::set_global_default(subscriber).expect("Failed to set subscriber");
-
+    rust_greeting();    
     gst::init()?;
     // An Actix runtime system is created and used to run the server function
     //  which is defined in the gateway::server module
@@ -333,6 +424,10 @@ fn android_main(app: AndroidApp) {
     use log::Level;
     
     use egui_winit::winit::platform::android::EventLoopBuilderExtAndroid;
+// Set the GStreamer debug level before initializing GStreamer
+env::set_var("GST_DEBUG", "srtsink:8,giosrc:8");
+env::set_var("RUST_BACKTRACE", "full");
+// env::set_var("GST_DEBUG", "3"); // Levels are 0-5; 3 is a good starting point
 
     android_logger::init_once(
         android_logger::Config::default().with_max_level(log::LevelFilter::Debug),
