@@ -10,6 +10,18 @@
 - [ ] How Working app in background (freeze video bitrate from 2000kb to 300-500kb )
 - [ ] Add image from base64 encode, from memory without storage
 - [ ] research ges-launch-1.0 --load project.xges -o project.mp4 # encode
+- [ ] research add overlay with Overlay implemented with OpenCV, PyCairo
+- [ ] research souphttpsrc work
+- [+] research giosrc work
+
+- [ ] research wpe-and-gstreamer work
+https://base-art.net/Articles/web-augmented-graphics-overlay-broadcasting-with-wpe-and-gstreamer/
+
+https://lifestyletransfer.com/how-to-watch-youtube-videos-with-gstreamer/
+
+
+https://lifestyletransfer.com/how-to-draw-kitten-on-video-faster-with-gstreamer/
+https://github.com/jackersson/gst-overlay
 
 https://www.jamesh.id.au/talks/plug-2021-05/ges-slides.pdf
 rendered to a video from presentation
