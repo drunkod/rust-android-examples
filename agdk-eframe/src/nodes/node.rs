@@ -273,14 +273,18 @@ enum Node {
 }
 
 impl Node {
-    /// Start the node
+    /// Starts the node by sending a `StartMessage` to the recipient actor.
+    /// Returns a future that will resolve to a `Result` indicating success or an error.
     fn start(&mut self, msg: StartMessage) -> ResponseFuture<Result<(), Error>> {
+        // Match the node type and get the corresponding recipient for the StartMessage
         let recipient: Recipient<StartMessage> = match self {
+            // For each Node variant, clone the address and get the recipient
             Node::VideoGenerator(addr) => addr.clone().recipient(),
             Node::Source(addr) => addr.clone().recipient(),
             Node::Destination(addr) => addr.clone().recipient(),
             Node::Mixer(addr) => addr.clone().recipient(),
         };
+        // Send the message asynchronously and handle the response
         Box::pin(async move {
             match recipient.send(msg).await {
                 Ok(res) => res,

@@ -35,21 +35,36 @@ use tracing::{debug, error, instrument, trace};
 /// Конвейер и различные элементы GStreamer, которые источник
 /// по желанию обертывает, их время жизни не привязано напрямую к этому
 /// самого источника
+// The `Media` struct holds references to various GStreamer elements and tracks the state
+// of media streaming within a GStreamer pipeline.
 #[derive(Debug)]
 struct Media {
-    /// Обернутый трубопровод
-    /// The wrapped pipeline
+    /// The wrapped pipeline - This is the primary GStreamer pipeline that handles the media stream.
     pipeline: gst::Pipeline,
-    /// A helper for managing the pipeline
+
+    /// A helper for managing the pipeline - This might be an actor address (`Addr`) for an actor
+    /// that is responsible for managing and controlling the pipeline's state and actions.
     pipeline_manager: Addr<PipelineManager>,
-    /// `fallbacksrc`
+
+    /// `fallbacksrc`   
+    /// The source element, possibly used for providing a media stream to the pipeline.
+    /// If `fallbacksrc` is not available, this would be replaced with an alternative source element.
     src: gst::Element,
+
     /// Vector of `fallbackswitch`, only used to monitor status
+    /// A vector of switch elements (`fallbackswitch`). These are likely used to switch between
+    /// different media streams or sources. Each element in the vector represents a switch in the pipeline.
+    /// If `fallbackswitch` is not available, you would need to find an alternative way to handle stream switching.
     switches: Vec<gst::Element>,
-    /// Increments when the src element exposes pads, decrements
-    /// when they receive EOS
+
+    /// A counter for the number of streams that are currently active in the pipeline.
+    /// This value is increased when the `src` element exposes new pads (indicating a new stream)
+    /// and decreased when these pads receive an End-of-Stream (EOS) signal.
     n_streams: u32,
-    /// `urisourcebin`, only used to monitor status
+
+    /// An optional `urisourcebin` element that might be used for monitoring purposes.
+    /// If `fallbacksrc` is used to manage multiple URIs, `urisourcebin` could be an alternative
+    /// for handling URIs if you need a direct URI handling mechanism.
     source_bin: Option<gst::Element>,
 }
 

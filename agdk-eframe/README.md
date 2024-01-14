@@ -11,11 +11,28 @@
 - [ ] Add image from base64 encode, from memory without storage
 - [ ] research ges-launch-1.0 --load project.xges -o project.mp4 # encode
 - [ ] research add overlay with Overlay implemented with OpenCV, PyCairo
-- [ ] research souphttpsrc work
-- [+] research giosrc work
+- [+] research souphttpsrc work
+- [ ] research giosrc work
 
 - [ ] research wpe-and-gstreamer work
+
+- [ ] add check plugins
+
+- [ ] implement with other os projects  
+
+https://github.com/haileys/mixlab
+https://github.com/maxjoehnk/Mizer
+https://github.com/Gencaster/gencaster.github.io
+
+
+https://github.com/centricular/gstwebrtc-demos/blob/master/sendrecv/gst-rust/src/main.rs#L601
+
+maybe crosscompile to arm64
+https://github.com/Igalia/gst-wpe-webrtc-demo
+https://github.com/search?q=org%3AIgalia+wpesrc&type=code
 https://base-art.net/Articles/web-augmented-graphics-overlay-broadcasting-with-wpe-and-gstreamer/
+https://github.com/matthew1000/gstreamer-cheat-sheet/blob/master/web_page_capture.md?plain=1
+https://github.com/philn/cgs-stream-overlay-engine
 
 https://lifestyletransfer.com/how-to-watch-youtube-videos-with-gstreamer/
 
