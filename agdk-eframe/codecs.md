@@ -1,8 +1,5 @@
 
-create vertical graphviz dot with all step by step this code:
 
-
-add anatetion with number source code
 ## TODO
 - [+] add console log with MediaCodecListInfo
 - [ ] maybe add MediaCodecListCollector
