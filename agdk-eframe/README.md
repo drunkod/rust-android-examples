@@ -23,6 +23,7 @@
 https://github.com/haileys/mixlab
 https://github.com/maxjoehnk/Mizer
 https://github.com/Gencaster/gencaster.github.io
+https://github.com/ffplayout/ffplayout/tree/master ff rust
 
 
 https://github.com/centricular/gstwebrtc-demos/blob/master/sendrecv/gst-rust/src/main.rs#L601
