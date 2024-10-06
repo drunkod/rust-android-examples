@@ -3,8 +3,8 @@ export ANDROID_HOME=/home/alex/Android/Sdk
 # export NDK_HOME=$ANDROID_HOME/ndk/25.2.9519653
 export NDK_HOME=$ANDROID_HOME/ndk/21.4.7075529
 
-# VERSION=1.23.0.1
-VERSION=1.22.8
+# VERSION=1.23.0.1-full-without-rust
+VERSION=1.22.8-full-from-site
 
 export PKG_CONFIG_PATH=/home/alex/Загрузки/gstreamer-1.0-android-arm64-${VERSION}/arm64/lib/pkgconfig
 # export PKG_CONFIG_PATH=/nix/store/31s9l69j5n3q8kj39y75lpq2xp80vrm1-user-environment/lib/pkgconfig:/home/alex/Загрузки/gstreamer-1.0-android-arm64-${VERSION}/arm64/lib/pkgconfig
@@ -54,7 +54,7 @@ do
 
   cp -r $GSTREAMER_ROOT_ANDROID/${TARGET}/* ${GST_LIB}/${LIB}
   cp -r libs/${LIB}/libgstreamer_android.so ${GST_LIB}/${LIB}
-
+  cp -r libs/${LIB}/libgstreamer_for_android.so ${GST_LIB}/${LIB}
   echo 'Processing '${GST_LIB}'/'${LIB}'/lib/pkgconfig'
   cd ${GST_LIB}/${LIB}/lib
   # sed -i -e 's?prefix=.*?prefix='${GSTREAMER_ROOT_ANDROID}'/'${TARGET}'?g' pkgconfig/*
@@ -83,3 +83,4 @@ rm -rf libs obj
 echo "\n*** Done ***\n`ls out`"
 echo "\n\nYou need to add ${PWD}/${GST_LIB}/${LIB}/lib/pkgconfig to your PKG_CONFIG_PATH.\n\n" \
 "i.e. export PKG_CONFIG_PATH=${PWD}/${GST_LIB}/${LIB}/lib/pkgconfig"
+

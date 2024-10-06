@@ -1,7 +1,30 @@
 LOCAL_PATH := $(call my-dir)
+# Include prebuilt rust
+
+# include $(CLEAR_VARS)
+# LOCAL_MODULE            := gstfallbackswitch
+# LOCAL_SRC_FILES         := $(TARGET_ARCH_ABI)/libgstfallbackswitch.a
+# # The header files should be located in the following dir relative to jni/ dir
+# LOCAL_EXPORT_C_INCLUDES := include/
+
+# # Tells the build system what type of module to create.
+# include $(PREBUILT_STATIC_LIBRARY)
+
+# include $(CLEAR_VARS)
+# LOCAL_MODULE            := unwind
+# LOCAL_SRC_FILES         := $(TARGET_ARCH_ABI)/libunwind.a
+# # The header files should be located in the following dir relative to jni/ dir
+# # LOCAL_EXPORT_C_INCLUDES := include/
+# LOCAL_STATIC_LIBRARIES := unwind
+# # Tells the build system what type of module to create.
+# include $(PREBUILT_STATIC_LIBRARY)
+
 include $(CLEAR_VARS)
 
 LOCAL_MODULE := gstreamer_for_android
+
+# LOCAL_STATIC_LIBRARIES := gstfallbackswitch
+# LOCAL_SHARED_LIBRARIES := gstfallbackswitch
 LOCAL_SHARED_LIBRARIES := gstreamer_android
 LOCAL_LDLIBS := -llog
 include $(BUILD_SHARED_LIBRARY)
@@ -26,12 +49,15 @@ GSTREAMER_NDK_BUILD_PATH  := $(GSTREAMER_ROOT)/share/gst-android/ndk-build
 $(info "Step 27")
 include $(GSTREAMER_NDK_BUILD_PATH)/plugins.mk
 GSTREAMER_PLUGINS         := $(GSTREAMER_PLUGINS_CORE) $(GSTREAMER_PLUGINS_CODECS) $(GSTREAMER_PLUGINS_ENCODING) $(GSTREAMER_PLUGINS_NET) $(GSTREAMER_PLUGINS_PLAYBACK) $(GSTREAMER_PLUGINS_SYS) $(GSTREAMER_PLUGINS_EFFECTS) $(GSTREAMER_PLUGINS_VIS) $(GSTREAMER_PLUGINS_CODECS_RESTRICTED) $(GSTREAMER_PLUGINS_GES)
-# GSTREAMER_PLUGINS       := $(GSTREAMER_PLUGINS_CORE) $(GSTREAMER_PLUGINS_CODECS) $(GSTREAMER_PLUGINS_ENCODING) $(GSTREAMER_PLUGINS_NET) $(GSTREAMER_PLUGINS_PLAYBACK) $(GSTREAMER_PLUGINS_SYS) $(GSTREAMER_PLUGINS_EFFECTS) $(GSTREAMER_PLUGINS_VIS) $(GSTREAMER_PLUGINS_CAPTURE) $(GSTREAMER_PLUGINS_CODECS_RESTRICTED) $(GSTREAMER_PLUGINS_NET_RESTRICTED) $(GSTREAMER_PLUGINS_GES)
-GSTREAMER_EXTRA_DEPS      := glib-2.0 gobject-2.0 gstreamer-base-1.0 gstreamer-video-1.0 gstreamer-audio-1.0 gstreamer-player-1.0 gstreamer-sdp-1.0 gstreamer-app-1.0 gstreamer-webrtc-1.0 libsoup-2.4 json-glib-1.0 gio-2.0
-# GSTREAMER_EXTRA_DEPS    := glib-2.0 gobject-2.0 gstreamer-base-1.0 gstreamer-video-1.0 gstreamer-audio-1.0 gstreamer-player-1.0 gstreamer-sdp-1.0 gstreamer-webrtc-1.0 gstreamer-app-1.0 libsoup-2.4 json-glib-1.0 gio-2.0
+# GSTREAMER_PLUGINS       := $(GSTREAMER_PLUGINS_CORE) $(GSTREAMER_PLUGINS_CODECS) $(GSTREAMER_PLUGINS_ENCODING) $(GSTREAMER_PLUGINS_NET) $(GSTREAMER_PLUGINS_PLAYBACK) $(GSTREAMER_PLUGINS_SYS) $(GSTREAMER_PLUGINS_EFFECTS) $(GSTREAMER_PLUGINS_VIS) $(GSTREAMER_PLUGINS_CAPTURE) $(GSTREAMER_PLUGINS_CODECS_RESTRICTED) $(GSTREAMER_PLUGINS_NET_RESTRICTED) $(GSTREAMER_PLUGINS_GES) fallbackswitch
+GSTREAMER_EXTRA_DEPS      := glib-2.0 gobject-2.0 gstreamer-base-1.0 gstreamer-video-1.0 gstreamer-audio-1.0 gstreamer-player-1.0 gstreamer-sdp-1.0 gstreamer-app-1.0 gstreamer-webrtc-1.0 libsoup-2.4 json-glib-1.0 gio-2.0 gmodule-2.0 gstreamer-1.0
+# GSTREAMER_EXTRA_DEPS    := glib-2.0 gobject-2.0 gstreamer-base-1.0 gstreamer-video-1.0 gstreamer-audio-1.0 gstreamer-player-1.0 gstreamer-sdp-1.0 gstreamer-webrtc-1.0 gstreamer-app-1.0 libsoup-2.4 json-glib-1.0 gio-2.0 gmodule-2.0 gstreamer-1.0
 
 # GSTREAMER_EXTRA_DEPS      := gstreamer-webrtc-1.0 gstreamer-sdp-1.0 gstreamer-video-1.0 libsoup-2.4 json-glib-1.0 glib-2.0 gio-2.0
 GSTREAMER_EXTRA_LIBS      := -liconv
+
+GSTREAMER_INCLUDE_FONTS := yes
+GSTREAMER_INCLUDE_CA_CERTIFICATES := yes
 
 G_IO_MODULES = openssl
 

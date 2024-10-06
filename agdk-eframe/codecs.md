@@ -3,7 +3,8 @@
 ## TODO
 - [+] add console log with MediaCodecListInfo
 - [ ] maybe add MediaCodecListCollector
-- [ ] refactor to  
+- [ ] refactor to
+- [ ] add jni to rust
 
 To refactor the printCodecsNamed() method from your MainActivity class into another Java file, you need to follow these steps:
 

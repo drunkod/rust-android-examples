@@ -1,6 +1,8 @@
 mod gateway;
 mod nodes;
 mod utils;
+// mod fallbackswitch;
+
 use crate::utils::{
     make_element
 };
@@ -152,14 +154,20 @@ pub extern fn rust_greeting() {
 
     // Get a string containing the passed pipeline launch syntax audiotestsrc wave=saw freq=205 ! autoaudiosink
     // let pipeline_str = "audiotestsrc wave=saw freq=205 ! autoaudiosink";
-    let pipeline_str = "giosrc location=smb://othercomputer/demo.mp3 ! decodebin ! audioconvert ! audioresample ! autoaudiosink";
+    let pipeline_str = "audiotestsrc num-buffers=100 ! vorbisenc ! oggmux ! giosink location=smb://othercomputer/foo.flac";
+    // let pipeline_str = "giostreamsrc ";
     //gst-launch-1.0 souphttpsrc location=https://ice6.somafm.com/live-32-aac ssl-strict=false ! decodebin ! autoaudiosink
     // let pipeline_str = "souphttpsrc location=https://ice6.somafm.com/live-32-aac ssl-strict=false ! decodebin3 ! audioconvert ! audioresample ! autoaudiosink";
     // let pipeline_str = "souphttpsrc location=https://ice6.somafm.com/live-32-aac ssl-strict=false ! decodebin ! srtsink uri=srt://192.168.3.40:8888";
         // Initialize GStreamer
         gst::init().unwrap();
-
-        check_plugins().unwrap();
+        // let fallbackswitch = gst::ElementFactory::make("giostreamsrc")
+        // .property("src", gst::ClockTime::SECOND)
+        // .build()
+        // .unwrap();
+        // gstfallbackswitch::plugin_register_static().expect("Failed to register fallbackswitch plugin");
+        // check_plugins().unwrap();
+        // gstfallbackswitch::plugin_register_static().expect("Failed to register fallbackswitch plugin");    
 
         // println!("127>>>>>>>>>giosrc pipeline: {giosrc}");
 
