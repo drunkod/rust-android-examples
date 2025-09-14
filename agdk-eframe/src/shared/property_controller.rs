@@ -1,4 +1,9 @@
-//! Schedule gst::Object property updates
+use serde::{Deserialize, Serialize};
+use tracing::{debug, error, instrument, trace};
+use chrono::{DateTime, Utc};
+use gst::prelude::*;
+use anyhow::{anyhow, Error};
+/// Schedule gst::Object property updates
 
 use gst::glib::types::Type;
 use gst::prelude::*;
@@ -698,7 +703,7 @@ impl PropertyController {
 #[cfg(test)]
 pub mod tests {
     use super::*;
-    use crate::utils::{get_now, make_element};
+    use crate::shared::{get_now, make_element};
     use auteur_controlling::controller::{ControlMode, ControlPoint};
 
     #[test]

@@ -1,13 +1,25 @@
-//! A destination processing node.
-//!
-//! The actual destination depends on its family, for example RTMP or LocalFile
-//! are supported.
-//!
-//! Destinations spend time in the [`stopping state`](State::Stopping)
-//! during which EOS will be propagated down their pipeline before actually
-//! stopping.
-
+use tracing::{debug, error, instrument, trace};
+use gst::prelude::*;
+use anyhow::{anyhow, Error};
 use actix::prelude::*;
+/// A destination processing node.
+///
+/// The actual destination depends on its family, for example RTMP or LocalFile
+/// are supported.
+///
+/// Destinations spend time in the [`stopping state`](State::Stopping)
+/// during which EOS will be propagated down their pipeline before actually
+/// stopping.
+
+use crate::shared::{
+    make_element,
+    pipeline_manager::{PipelineManager, StopManagerMessage, WaitForEosMessage},
+    schedulable::{Schedulable, StateChangeResult, StateMachine},
+    stream_producer::StreamProducer,
+    ErrorMessage,
+};
+use actix::prelude::*;
+use actix::MessageResult;
 use anyhow::{anyhow, Error};
 use gst::prelude::*;
 use tracing::{debug, error, instrument, trace};
@@ -18,13 +30,8 @@ use super::node::{
     AddControlPointMessage, ConsumerMessage, GetNodeInfoMessage, NodeManager, NodeStatusMessage,
     RemoveControlPointMessage, ScheduleMessage, StartMessage, StopMessage, StoppedMessage,
 };
-use crate::utils::{
-    make_element, ErrorMessage, PipelineManager, Schedulable, StateChangeResult, StateMachine,
-    StopManagerMessage, StreamProducer, WaitForEosMessage,
-};
 
-
-use gio::TlsCertificateFlags; // This is the enum you want to use
+use gio::TlsCertificateFlags;
 
 /// Represents a potential connection to a producer
 struct ConsumerSlot {
@@ -333,10 +340,9 @@ impl Destination {
         let id = self.id.clone();
         self.pipeline.call_async(move |pipeline| {
             if let Err(err) = pipeline.set_state(gst::State::Playing) {
-                addr.do_send(ErrorMessage(format!(
-                    "Failed to start destination {}: {}",
-                    id, err
-                )));
+                addr.do_send(ErrorMessage {
+                    message: format!("Failed to start destination {}: {}", id, err),
+                });
             } else {
                 // Add debug print statement
                 println!("Pipeline set to Playing state successfully");
@@ -509,10 +515,9 @@ impl Destination {
         let id = self.id.clone();
         self.pipeline.call_async(move |pipeline| {
             if let Err(err) = pipeline.set_state(gst::State::Playing) {
-                addr.do_send(ErrorMessage(format!(
-                    "Failed to start destination {}: {}",
-                    id, err
-                )));
+                addr.do_send(ErrorMessage {
+                    message: format!("Failed to start destination {}: {}", id, err),
+                });
             } else {
                 // Add debug print statement
                 println!("Pipeline set to Playing state successfully");
@@ -584,10 +589,9 @@ impl Destination {
         let id = self.id.clone();
         self.pipeline.call_async(move |pipeline| {
             if let Err(err) = pipeline.set_state(gst::State::Playing) {
-                addr.do_send(ErrorMessage(format!(
-                    "Failed to start destination {}: {}",
-                    id, err
-                )));
+                addr.do_send(ErrorMessage {
+                    message: format!("Failed to start destination {}: {}", id, err),
+                });
             }
         });
 
@@ -629,10 +633,9 @@ impl Destination {
         let id = self.id.clone();
         self.pipeline.call_async(move |pipeline| {
             if let Err(err) = pipeline.set_state(gst::State::Playing) {
-                addr.do_send(ErrorMessage(format!(
-                    "Failed to start destination {}: {}",
-                    id, err
-                )));
+                addr.do_send(ErrorMessage {
+                    message: format!("Failed to start destination {}: {}", id, err),
+                });
             }
         });
 
@@ -867,11 +870,11 @@ impl Handler<ErrorMessage> for Destination {
     type Result = ();
 
     fn handle(&mut self, msg: ErrorMessage, ctx: &mut Context<Self>) -> Self::Result {
-        error!("Got error message '{}' on destination {}", msg.0, self.id,);
+        error!("Got error message '{}' on destination {}", msg.message, self.id,);
 
         NodeManager::from_registry().do_send(NodeStatusMessage::Error {
             id: self.id.clone(),
-            message: msg.0,
+            message: msg.message,
         });
 
         gst::debug_bin_to_dot_file_with_ts(
@@ -933,7 +936,7 @@ impl Handler<GetNodeInfoMessage> for Destination {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::utils::tests::*;
+    use crate::shared::tests::*;
     use tempfile::tempdir;
     use test_log::test;
 

@@ -1,63 +1,92 @@
-//! A source processing node.
-//!
-//! The only supported source type is created with a URI. In the future
-//! generators could also be supported, for example to display a countdown.
-//!
-//! The main complexity for this node is the [`starting`](State::Starting)
-//! feature: when the node is scheduled to play in the future, we spin it
-//! up 10 seconds before its cue time. Non-live sources are blocked
-//! by fallbacksrc, which only picks a base time once unblocked,
-//! and data coming from live sources is discarded by the StreamProducers
-//! until forward() is called on them.
-//!
-//! Part of the extra complexity is due to the rescheduling feature:
-//! when rescheduling a prerolling source, we want to tear down the
-//! previous pipeline, but as logical connections are tracked by the
-//! StreamProducer elements, we want to keep their lifecycle tied to
-//! that of the source. This means appsinks may be removed from an old
-//! pipeline and moved to a new one, this is safe but needs to be kept
-//! in mind.
+use tracing::{debug, error, instrument, trace};
+use chrono::{DateTime, Utc};
+use gst::prelude::*;
+use anyhow::{anyhow, Error};
+use actix::prelude::*;
+/// Узел обработки источника.//!
+/// Единственный поддерживаемый тип источника создается с помощью URI. В будущем
+/// Генераторы также могут поддерживаться, например, для отображения обратного отсчета.
+///
+/// Основной сложностью для этого узла является [`starting`](State::Starting)
+/// Особенность: когда узел должен играть в будущем, мы его раскручиваем
+/// встать за 10 секунд до начала. Неживые источники блокируются
+/// by fallbacksrc, который выбирает базовое время только после разблокировки,
+/// и данные, поступающие из живых источников, отбрасываются StreamProducers
+/// пока для них не будет вызвана функция forward().
+///
+/// Часть дополнительной сложности связана с функцией изменения расписания:
+/// При перепланировании источника прероллинга мы хотим снести
+/// предыдущий конвейер, но поскольку логические соединения отслеживаются
+/// элементы StreamProducer, мы хотим сохранить их жизненный цикл привязанным к
+/// что и в источнике. Это означает, что ссылки на приложения могут быть удалены из старых
+/// трубопровод и переместился на новый, он безопасен, но его нужно сохранить
+/// в памяти.
 
-use super::node::{
-    AddControlPointMessage, GetNodeInfoMessage, GetProducerMessage, NodeManager, NodeStatusMessage,
-    RemoveControlPointMessage, ScheduleMessage, StartMessage, StopMessage, StoppedMessage,
-};
-use crate::utils::{
-    make_element, ErrorMessage, PipelineManager, Schedulable, StateChangeResult, StateMachine,
-    StopManagerMessage, StreamProducer,
+use crate::shared::{
+    make_element,
+    pipeline_manager::{PipelineManager, StopManagerMessage},
+    schedulable::{Schedulable, StateChangeResult, StateMachine},
+    stream_producer::StreamProducer,
+    ErrorMessage,
 };
 use actix::prelude::*;
+use actix::MessageResult;
 use anyhow::{anyhow, Error};
 use auteur_controlling::controller::{NodeInfo, SourceInfo, State};
 use chrono::{DateTime, Utc};
 use gst::prelude::*;
 use tracing::{debug, error, instrument, trace};
 
-/// The pipeline and various GStreamer elements that the source
-/// optionally wraps, their lifetime is not directly bound to that
-/// of the source itself
+use super::node::{
+    AddControlPointMessage, GetNodeInfoMessage, GetProducerMessage, NodeManager, NodeStatusMessage,
+    RemoveControlPointMessage, ScheduleMessage, StartMessage, StopMessage, StoppedMessage,
+};
+
+/// Конвейер и различные элементы GStreamer, которые источник
+/// по желанию обертывает, их время жизни не привязано напрямую к этому
+/// самого источника
+// The `Media` struct holds references to various GStreamer elements and tracks the state
+// of media streaming within a GStreamer pipeline.
 #[derive(Debug)]
 struct Media {
-    /// The wrapped pipeline
+    /// The wrapped pipeline - This is the primary GStreamer pipeline that handles the media stream.
     pipeline: gst::Pipeline,
-    /// A helper for managing the pipeline
+
+    /// A helper for managing the pipeline - This might be an actor address (`Addr`) for an actor
+    /// that is responsible for managing and controlling the pipeline's state and actions.
     pipeline_manager: Addr<PipelineManager>,
-    /// `videotestsrc`
+
+    /// `fallbacksrc`   
+    /// The source element, possibly used for providing a media stream to the pipeline.
+    /// If `fallbacksrc` is not available, this would be replaced with an alternative source element.
     src: gst::Element,
+
     /// Vector of `fallbackswitch`, only used to monitor status
+    /// A vector of switch elements (`fallbackswitch`). These are likely used to switch between
+    /// different media streams or sources. Each element in the vector represents a switch in the pipeline.
+    /// If `fallbackswitch` is not available, you would need to find an alternative way to handle stream switching.
     switches: Vec<gst::Element>,
-    /// Increments when the src element exposes pads, decrements
-    /// when they receive EOS
+
+    /// A counter for the number of streams that are currently active in the pipeline.
+    /// This value is increased when the `src` element exposes new pads (indicating a new stream)
+    /// and decreased when these pads receive an End-of-Stream (EOS) signal.
     n_streams: u32,
-    /// `urisourcebin`, only used to monitor status
+
+    /// An optional `urisourcebin` element that might be used for monitoring purposes.
+    /// If `fallbacksrc` is used to manage multiple URIs, `urisourcebin` could be an alternative
+    /// for handling URIs if you need a direct URI handling mechanism.
     source_bin: Option<gst::Element>,
 }
 
 /// The Source actor
 #[derive(Debug)]
-pub struct VideoGenerator {
+pub struct Source {
     /// Unique identifier
     id: String,
+    /// URI the source will play
+    uri: String,
+    /// Output audio producer
+    audio_producer: Option<StreamProducer>,
     /// Output video producer
     video_producer: Option<StreamProducer>,
     /// GStreamer elements when prerolling or playing
@@ -68,11 +97,27 @@ pub struct VideoGenerator {
     state_machine: StateMachine,
 }
 
-impl VideoGenerator {
+impl Source {
+     // Constructor to create a new source.
     /// Create a source
     #[instrument(level = "debug", name = "creating")]
-    pub fn new(id: &str) -> Self {
-        let video_producer = {
+    pub fn new(id: &str, uri: &str, audio: bool, video: bool) -> Self {
+        // Initialize audio and video producers based on configuration.
+        // Other properties are set to default values.        
+        let audio_producer = if audio {
+            Some(StreamProducer::from(
+                &gst::ElementFactory::make("appsink")
+                    .name(&format!("src-audio-appsink-{}", id))
+                    .build()
+                    .unwrap()
+                    .downcast::<gst_app::AppSink>()
+                    .unwrap(),
+            ))
+        } else {
+            None
+        };
+
+        let video_producer = if video {
             Some(StreamProducer::from(
                 &gst::ElementFactory::make("appsink")
                     .name(&format!("src-video-appsink-{}", id))
@@ -81,26 +126,33 @@ impl VideoGenerator {
                     .downcast::<gst_app::AppSink>()
                     .unwrap(),
             ))
+        } else {
+            None
         };
 
         Self {
             id: id.to_string(),
+            uri: uri.to_string(),
+            audio_producer,
             video_producer,
             media: None,
             monitor_handle: None,
             state_machine: StateMachine::default(),
         }
     }
-
-    /// Connect pads exposed by `fallbacksrc` to our output producers
-    #[instrument(level = "debug", name = "connecting", skip(pipeline, is_video, pad, video_producer), fields(pad = %pad.name()))]
+    // Method to connect pads exposed by `fallbacksrc` to output producer
+    /// Подключите колодки, открытые `fallbacksrc`, к нашим производителям вывода
+    #[instrument(level = "debug", name = "connecting", skip(pipeline, is_video, pad, video_producer, audio_producer), fields(pad = %pad.name()))]
     fn connect_pad(
         id: String,
         is_video: bool,
         pipeline: &gst::Pipeline,
         pad: &gst::Pad,
         video_producer: &Option<StreamProducer>,
+        audio_producer: &Option<StreamProducer>,
     ) -> Result<Option<gst::Element>, Error> {
+        // Handle pad connections based on audio or video type.
+        // Управление подключениями пэдов в зависимомти от типа аудио или видео
         if is_video {
             if let Some(video_producer) = video_producer {
                 let deinterlace = make_element("deinterlace", None)?;
@@ -121,43 +173,68 @@ impl VideoGenerator {
             } else {
                 Ok(None)
             }
+        } else if let Some(audio_producer) = audio_producer {
+            let aconv = make_element("audioconvert", None)?;
+            let level = make_element("level", None)?;
+
+            pipeline.add_many(&[&aconv, &level])?;
+
+            let appsink = audio_producer.appsink();
+
+            debug!(appsink = %appsink.name(), "linking audio stream to appsink");
+
+            aconv.sync_state_with_parent()?;
+            level.sync_state_with_parent()?;
+
+            gst::Element::link_many(&[&aconv, &level, appsink.upcast_ref()])?;
+
+            let sinkpad = aconv.static_pad("sink").unwrap();
+            pad.link(&sinkpad)?;
+
+            Ok(Some(appsink.upcast()))
         } else {
             Ok(None)
         }
     }
 
-    /// Preroll the pipeline ahead of time (by default 10 seconds before cue time)
+    /// Прокрутите pipeline трубопровод заранее (по умолчанию за 10 секунд до начала сигнала).
     #[instrument(level = "debug", name = "prerolling", skip(self, ctx), fields(id = %self.id))]
     fn preroll(&mut self, ctx: &mut Context<Self>) -> Result<StateChangeResult, Error> {
         // let pipeline = gst::Pipeline::new(Some(&self.id.to_string()));
         let pipeline = gst::Pipeline::with_name(&self.id.to_string());
+        if let Some(ref audio_producer) = self.audio_producer {
+            pipeline.add(audio_producer.appsink().upcast_ref::<gst::Element>())?;
+        }
+
         if let Some(ref video_producer) = self.video_producer {
             pipeline.add(video_producer.appsink().upcast_ref::<gst::Element>())?;
         }
 
-        let src = make_element("videotestsrc", None)?;
+        let src = make_element("fallbacksrc", None)?;
         pipeline.add(&src)?;
-
-        src.set_property("flip", &true);
-        src.set_property("is-live", &true);
-        src.set_property_from_str("pattern", "ball");
-        
-        // src.set_property("enable-video", &self.video_producer.is_some());
+        println!("185 >>>>>>>src.set_property to uri: {}", &self.uri);
+        src.set_property("uri", &self.uri);
+        src.set_property("manual-unblock", &true);
+        src.set_property("immediate-fallback", &true);
+        src.set_property("enable-audio", &self.audio_producer.is_some());
+        src.set_property("enable-video", &self.video_producer.is_some());
 
         let pipeline_clone = pipeline.downgrade();
         let addr = ctx.address();
 
         let video_producer = self.video_producer.clone();
+        let audio_producer = self.audio_producer.clone();
         let id = self.id.clone();
         src.connect_pad_added(move |_src, pad| {
             if let Some(pipeline) = pipeline_clone.upgrade() {
                 let is_video = pad.name() == "video";
-                match VideoGenerator::connect_pad(
+                match Source::connect_pad(
                     id.clone(),
                     is_video,
                     &pipeline,
                     pad,
                     &video_producer,
+                    &audio_producer,
                 ) {
                     Ok(Some(appsink)) => {
                         let addr_clone = addr.clone();
@@ -177,10 +254,9 @@ impl VideoGenerator {
                         addr.do_send(StreamMessage { starting: true });
                     }
                     Ok(None) => (),
-                    Err(err) => addr.do_send(ErrorMessage(format!(
-                        "Failed to connect source stream: {:?}",
-                        err
-                    ))),
+                    Err(err) => addr.do_send(ErrorMessage {
+                        message: format!("Failed to connect source stream: {:?}", err),
+                    }),
                 }
             }
         });
@@ -197,19 +273,19 @@ impl VideoGenerator {
             None
         });
 
-        //TODO remove this
-        // let src_bin: &gst::Bin = src.downcast_ref().unwrap();
+        let src_bin: &gst::Bin = src.downcast_ref().unwrap();
 
-        // let addr = ctx.address();
-        // src_bin.connect_deep_element_added(move |_src, _bin, element| {
-        //     if element.has_property("primary-health", None) {
-        //         addr.do_send(NewSwitchMessage(element.clone()));
-        //     }
-        //
-        //     if element.type_().name() == "GstURISourceBin" {
-        //         addr.do_send(NewSourceBinMessage(element.clone()));
-        //     }
-        // });
+        let addr = ctx.address();
+        src_bin.connect_deep_element_added(move |_src, _bin, element| {
+            if element.has_property("primary-health", None) {
+                addr.do_send(NewSwitchMessage(element.clone()));
+            }
+
+            if element.type_().name() == "GstURISourceBin" {
+                addr.do_send(NewSourceBinMessage(element.clone()));
+            }
+        });
+        println!("259 now prerolling to uri: {}", &self.uri);
 
         debug!("now prerolling");
 
@@ -231,16 +307,15 @@ impl VideoGenerator {
         let id = self.id.clone();
 
         if let Err(err) = pipeline.set_state(gst::State::Playing) {
-            addr.do_send(ErrorMessage(format!(
-                "Failed to start source {}: {}",
-                id, err
-            )));
+            addr.do_send(ErrorMessage {
+                message: format!("Failed to start source {}: {}", id, err),
+            });
         }
-
+        println!("285 ok prerolling to uri: {}", &self.uri);
         Ok(StateChangeResult::Success)
     }
 
-    /// Unblock a prerolling pipeline
+    /// Разблокируйте трубопровод прероллинга
     #[instrument(level = "debug", name = "unblocking", skip(self), fields(id = %self.id))]
     fn unblock(&mut self, ctx: &mut Context<Self>) -> Result<StateChangeResult, Error> {
         let media = self.media.as_ref().unwrap();
@@ -248,6 +323,10 @@ impl VideoGenerator {
         media.src.emit_by_name::<()>("unblock", &[]);
 
         if let Some(ref producer) = self.video_producer {
+            producer.forward();
+        }
+
+        if let Some(ref producer) = self.audio_producer {
             producer.forward();
         }
 
@@ -351,6 +430,13 @@ impl VideoGenerator {
             debug!("tearing down previously prerolling pipeline");
             let _ = media.pipeline.set_state(gst::State::Null);
 
+            if let Some(ref producer) = self.audio_producer {
+                media
+                    .pipeline
+                    .remove(producer.appsink().upcast_ref::<gst::Element>())
+                    .unwrap();
+            }
+
             if let Some(ref producer) = self.video_producer {
                 media
                     .pipeline
@@ -371,7 +457,7 @@ impl VideoGenerator {
     }
 }
 
-impl Actor for VideoGenerator {
+impl Actor for Source {
     type Context = Context<Self>;
 
     #[instrument(level = "debug", name = "starting", skip(self, _ctx), fields(id = %self.id))]
@@ -386,12 +472,12 @@ impl Actor for VideoGenerator {
         NodeManager::from_registry().do_send(StoppedMessage {
             id: self.id.clone(),
             video_producer: self.video_producer.clone(),
-            audio_producer: None,
+            audio_producer: self.audio_producer.clone(),
         });
     }
 }
 
-impl Schedulable<Self> for VideoGenerator {
+impl Schedulable<Self> for Source {
     fn state_machine(&self) -> &StateMachine {
         &self.state_machine
     }
@@ -439,7 +525,7 @@ impl Schedulable<Self> for VideoGenerator {
 /// Sent by the [`Source`] to notify itself that a stream started or ended
 #[derive(Debug)]
 struct StreamMessage {
-    /// Whether the stream is starting or ending
+    /// Начинается или заканчивается поток
     starting: bool,
 }
 
@@ -447,7 +533,7 @@ impl Message for StreamMessage {
     type Result = ();
 }
 
-impl Handler<StreamMessage> for VideoGenerator {
+impl Handler<StreamMessage> for Source {
     type Result = ();
 
     fn handle(&mut self, msg: StreamMessage, ctx: &mut Context<Self>) {
@@ -455,7 +541,7 @@ impl Handler<StreamMessage> for VideoGenerator {
     }
 }
 
-impl Handler<StartMessage> for VideoGenerator {
+impl Handler<StartMessage> for Source {
     type Result = MessageResult<StartMessage>;
 
     fn handle(&mut self, msg: StartMessage, ctx: &mut Context<Self>) -> Self::Result {
@@ -463,23 +549,26 @@ impl Handler<StartMessage> for VideoGenerator {
     }
 }
 
-impl Handler<GetProducerMessage> for VideoGenerator {
+impl Handler<GetProducerMessage> for Source {
     type Result = MessageResult<GetProducerMessage>;
 
     fn handle(&mut self, _msg: GetProducerMessage, _ctx: &mut Context<Self>) -> Self::Result {
-        MessageResult(Ok((self.video_producer.clone(), Option::None)))
+        MessageResult(Ok((
+            self.video_producer.clone(),
+            self.audio_producer.clone(),
+        )))
     }
 }
 
-impl Handler<ErrorMessage> for VideoGenerator {
+impl Handler<ErrorMessage> for Source {
     type Result = ();
 
     fn handle(&mut self, msg: ErrorMessage, ctx: &mut Context<Self>) -> Self::Result {
-        error!("Got error message '{}' on source {}", msg.0, self.id,);
+        error!("Got error message '{}' on source {}", msg.message, self.id,);
 
         NodeManager::from_registry().do_send(NodeStatusMessage::Error {
             id: self.id.clone(),
-            message: msg.0,
+            message: msg.message,
         });
 
         if let Some(media) = &self.media {
@@ -494,7 +583,7 @@ impl Handler<ErrorMessage> for VideoGenerator {
     }
 }
 
-/// Sent by the [`Source`] to notify itself that a new `fallbackswitch`
+/// Отправляется [Источником], чтобы уведомить себя о том, что новый `fallbackswitch`
 /// was added in `fallbacksrc`
 #[derive(Debug)]
 struct NewSwitchMessage(gst::Element);
@@ -503,7 +592,7 @@ impl Message for NewSwitchMessage {
     type Result = ();
 }
 
-impl Handler<NewSwitchMessage> for VideoGenerator {
+impl Handler<NewSwitchMessage> for Source {
     type Result = ();
 
     fn handle(&mut self, msg: NewSwitchMessage, ctx: &mut Context<Self>) -> Self::Result {
@@ -520,7 +609,7 @@ impl Message for NewSourceBinMessage {
     type Result = ();
 }
 
-impl Handler<NewSourceBinMessage> for VideoGenerator {
+impl Handler<NewSourceBinMessage> for Source {
     type Result = ();
 
     fn handle(&mut self, msg: NewSourceBinMessage, _ctx: &mut Context<Self>) -> Self::Result {
@@ -530,7 +619,7 @@ impl Handler<NewSourceBinMessage> for VideoGenerator {
     }
 }
 
-/// Sent by the [`Source`] to notify itself that the status of one
+/// Отправляется [`Источником`], чтобы уведомить себя о том, что статус одного
 /// of the monitored elements changed
 #[derive(Debug)]
 struct SourceStatusMessage;
@@ -539,7 +628,7 @@ impl Message for SourceStatusMessage {
     type Result = ();
 }
 
-impl Handler<SourceStatusMessage> for VideoGenerator {
+impl Handler<SourceStatusMessage> for Source {
     type Result = ();
 
     fn handle(&mut self, _msg: SourceStatusMessage, _ctx: &mut Context<Self>) -> Self::Result {
@@ -547,7 +636,7 @@ impl Handler<SourceStatusMessage> for VideoGenerator {
     }
 }
 
-impl Handler<ScheduleMessage> for VideoGenerator {
+impl Handler<ScheduleMessage> for Source {
     type Result = Result<(), Error>;
 
     fn handle(&mut self, msg: ScheduleMessage, ctx: &mut Context<Self>) -> Self::Result {
@@ -555,7 +644,7 @@ impl Handler<ScheduleMessage> for VideoGenerator {
     }
 }
 
-impl Handler<StopMessage> for VideoGenerator {
+impl Handler<StopMessage> for Source {
     type Result = Result<(), Error>;
 
     fn handle(&mut self, _msg: StopMessage, ctx: &mut Context<Self>) -> Self::Result {
@@ -564,22 +653,22 @@ impl Handler<StopMessage> for VideoGenerator {
     }
 }
 
-impl Handler<GetNodeInfoMessage> for VideoGenerator {
+impl Handler<GetNodeInfoMessage> for Source {
     type Result = Result<NodeInfo, Error>;
 
     fn handle(&mut self, _msg: GetNodeInfoMessage, _ctx: &mut Context<Self>) -> Self::Result {
         Ok(NodeInfo::Source(SourceInfo {
-            uri: "generated".to_string(), //TODO check this!
+            uri: self.uri.clone(),
             video_consumer_slot_ids: self.video_producer.as_ref().map(|p| p.get_consumer_ids()),
+            audio_consumer_slot_ids: self.audio_producer.as_ref().map(|p| p.get_consumer_ids()),
             cue_time: self.state_machine.cue_time,
             end_time: self.state_machine.end_time,
             state: self.state_machine.state,
-            audio_consumer_slot_ids: Option::None,
         }))
     }
 }
 
-impl Handler<AddControlPointMessage> for VideoGenerator {
+impl Handler<AddControlPointMessage> for Source {
     type Result = Result<(), Error>;
 
     fn handle(&mut self, _msg: AddControlPointMessage, _ctx: &mut Context<Self>) -> Self::Result {
@@ -587,7 +676,7 @@ impl Handler<AddControlPointMessage> for VideoGenerator {
     }
 }
 
-impl Handler<RemoveControlPointMessage> for VideoGenerator {
+impl Handler<RemoveControlPointMessage> for Source {
     type Result = ();
 
     fn handle(
@@ -601,8 +690,8 @@ impl Handler<RemoveControlPointMessage> for VideoGenerator {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::utils::get_now;
-    use crate::utils::tests::*;
+    use crate::shared::get_now;
+    use crate::shared::tests::*;
     use std::collections::VecDeque;
     use test_log::test;
 
@@ -622,12 +711,51 @@ mod tests {
         if let NodeInfo::Source(sinfo) = info {
             assert_eq!(sinfo.uri, uri);
             assert!(sinfo.video_consumer_slot_ids.unwrap().is_empty());
+            assert!(sinfo.audio_consumer_slot_ids.unwrap().is_empty());
             assert!(sinfo.cue_time.is_none());
             assert!(sinfo.end_time.is_none());
             assert_eq!(sinfo.state, State::Initial);
         } else {
             panic!("Wrong info type");
         }
+    }
+
+    #[actix_rt::test]
+    #[test]
+    async fn test_disable_video() {
+        gst::init().unwrap();
+        let uri = asset_uri("ball.mp4");
+
+        // Create a valid source
+        create_source("test-source", &uri, false, true)
+            .await
+            .unwrap();
+
+        let info = node_info_unchecked("test-source").await;
+
+        if let NodeInfo::Source(sinfo) = info {
+            assert_eq!(sinfo.uri, uri);
+            assert!(sinfo.video_consumer_slot_ids.is_none());
+            assert!(sinfo.audio_consumer_slot_ids.unwrap().is_empty());
+            assert!(sinfo.cue_time.is_none());
+            assert!(sinfo.end_time.is_none());
+            assert_eq!(sinfo.state, State::Initial);
+        } else {
+            panic!("Wrong info type");
+        }
+    }
+
+    #[actix_rt::test]
+    #[test]
+    #[should_panic(expected = "must have either audio or video enabled")]
+    async fn test_disable_video_audio() {
+        gst::init().unwrap();
+        let uri = asset_uri("ball.mp4");
+
+        // Create a valid source
+        create_source("test-source", &uri, false, false)
+            .await
+            .unwrap();
     }
 
     #[actix_rt::test]

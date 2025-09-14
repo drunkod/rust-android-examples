@@ -1,6 +1,10 @@
-//! Helper gst::Pipeline wrapper
+use futures::prelude::*;
+use tracing::{debug, error, instrument, trace};
+use gst::prelude::*;
+use actix::prelude::*;
+/// Helper gst::Pipeline wrapper
 
-use crate::utils::ErrorMessage;
+use crate::shared::ErrorMessage;
 use actix::prelude::*;
 use actix::WeakRecipient;
 use futures::channel::oneshot;

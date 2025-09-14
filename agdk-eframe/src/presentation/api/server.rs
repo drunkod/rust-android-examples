@@ -1,18 +1,21 @@
-//! Implementation of the HTTP service
+use tracing::{debug, error, instrument, trace};
+use anyhow::{anyhow, Error};
+use actix::prelude::*;
+/// Implementation of the HTTP service
 
-use super::config::Config;
-use std::sync::Arc;
-
-use crate::nodes::node::{CommandMessage, NodeManager, StopMessage};
-
+use crate::shared::config::Config;
 use actix::{Actor, Addr, SystemService};
 use actix_web::{error, web, App, HttpRequest, HttpResponse, HttpServer, Responder};
 use actix_web_actors::ws;
-
+use anyhow;
 use auteur_controlling::controller::Command;
-use tracing::error;
+use log::{debug, error};
+use openssl;
+use std::sync::Arc;
+use tracing;
+use tracing_actix_web;
 
-use log::{debug};
+use crate::domain::nodes::node::{CommandMessage, NodeManager, StopMessage};
 // Function to create a command
 async fn create_command(
     node_manager: web::Data<Addr<NodeManager>>,

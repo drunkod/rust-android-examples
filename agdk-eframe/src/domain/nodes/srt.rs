@@ -1,27 +1,33 @@
-//! Узел обработки источника.//!
-//! Единственный поддерживаемый тип источника создается с помощью URI. В будущем
-//! Генераторы также могут поддерживаться, например, для отображения обратного отсчета.
+use tracing::{debug, error, instrument, trace};
+use chrono::{DateTime, Utc};
+use gst::prelude::*;
+use anyhow::{anyhow, Error};
+use actix::prelude::*;
+//! A source processing node.
 //!
-//! Основной сложностью для этого узла является [`starting`](State::Starting)
-//! Особенность: когда узел должен играть в будущем, мы его раскручиваем
-//! встать за 10 секунд до начала. Неживые источники блокируются
-//! by fallbacksrc, который выбирает базовое время только после разблокировки,
-//! и данные, поступающие из живых источников, отбрасываются StreamProducers
-//! пока для них не будет вызвана функция forward().
+//! The only supported source type is created with a URI. In the future
+//! generators could also be supported, for example to display a countdown.
 //!
-//! Часть дополнительной сложности связана с функцией изменения расписания:
-//! При перепланировании источника прероллинга мы хотим снести
-//! предыдущий конвейер, но поскольку логические соединения отслеживаются
-//! элементы StreamProducer, мы хотим сохранить их жизненный цикл привязанным к
-//! что и в источнике. Это означает, что ссылки на приложения могут быть удалены из старых
-//! трубопровод и переместился на новый, он безопасен, но его нужно сохранить
-//! в памяти.
+//! The main complexity for this node is the [`starting`](State::Starting)
+//! feature: when the node is scheduled to play in the future, we spin it
+//! up 10 seconds before its cue time. Non-live sources are blocked
+//! by fallbacksrc, which only picks a base time once unblocked,
+//! and data coming from live sources is discarded by the StreamProducers
+//! until forward() is called on them.
+//!
+//! Part of the extra complexity is due to the rescheduling feature:
+//! when rescheduling a prerolling source, we want to tear down the
+//! previous pipeline, but as logical connections are tracked by the
+//! StreamProducer elements, we want to keep their lifecycle tied to
+//! that of the source. This means appsinks may be removed from an old
+//! pipeline and moved to a new one, this is safe but needs to be kept
+//! in mind.
 
 use super::node::{
     AddControlPointMessage, GetNodeInfoMessage, GetProducerMessage, NodeManager, NodeStatusMessage,
     RemoveControlPointMessage, ScheduleMessage, StartMessage, StopMessage, StoppedMessage,
 };
-use crate::utils::{
+use crate::shared::{
     make_element, ErrorMessage, PipelineManager, Schedulable, StateChangeResult, StateMachine,
     StopManagerMessage, StreamProducer,
 };
@@ -32,39 +38,23 @@ use chrono::{DateTime, Utc};
 use gst::prelude::*;
 use tracing::{debug, error, instrument, trace};
 
-/// Конвейер и различные элементы GStreamer, которые источник
-/// по желанию обертывает, их время жизни не привязано напрямую к этому
-/// самого источника
-// The `Media` struct holds references to various GStreamer elements and tracks the state
-// of media streaming within a GStreamer pipeline.
+/// The pipeline and various GStreamer elements that the source
+/// optionally wraps, their lifetime is not directly bound to that
+/// of the source itself
 #[derive(Debug)]
 struct Media {
-    /// The wrapped pipeline - This is the primary GStreamer pipeline that handles the media stream.
+    /// The wrapped pipeline
     pipeline: gst::Pipeline,
-
-    /// A helper for managing the pipeline - This might be an actor address (`Addr`) for an actor
-    /// that is responsible for managing and controlling the pipeline's state and actions.
+    /// A helper for managing the pipeline
     pipeline_manager: Addr<PipelineManager>,
-
-    /// `fallbacksrc`   
-    /// The source element, possibly used for providing a media stream to the pipeline.
-    /// If `fallbacksrc` is not available, this would be replaced with an alternative source element.
+    /// `fallbacksrc`
     src: gst::Element,
-
     /// Vector of `fallbackswitch`, only used to monitor status
-    /// A vector of switch elements (`fallbackswitch`). These are likely used to switch between
-    /// different media streams or sources. Each element in the vector represents a switch in the pipeline.
-    /// If `fallbackswitch` is not available, you would need to find an alternative way to handle stream switching.
     switches: Vec<gst::Element>,
-
-    /// A counter for the number of streams that are currently active in the pipeline.
-    /// This value is increased when the `src` element exposes new pads (indicating a new stream)
-    /// and decreased when these pads receive an End-of-Stream (EOS) signal.
+    /// Increments when the src element exposes pads, decrements
+    /// when they receive EOS
     n_streams: u32,
-
-    /// An optional `urisourcebin` element that might be used for monitoring purposes.
-    /// If `fallbacksrc` is used to manage multiple URIs, `urisourcebin` could be an alternative
-    /// for handling URIs if you need a direct URI handling mechanism.
+    /// `urisourcebin`, only used to monitor status
     source_bin: Option<gst::Element>,
 }
 
@@ -88,12 +78,9 @@ pub struct Source {
 }
 
 impl Source {
-     // Constructor to create a new source.
     /// Create a source
     #[instrument(level = "debug", name = "creating")]
     pub fn new(id: &str, uri: &str, audio: bool, video: bool) -> Self {
-        // Initialize audio and video producers based on configuration.
-        // Other properties are set to default values.        
         let audio_producer = if audio {
             Some(StreamProducer::from(
                 &gst::ElementFactory::make("appsink")
@@ -130,8 +117,8 @@ impl Source {
             state_machine: StateMachine::default(),
         }
     }
-    // Method to connect pads exposed by `fallbacksrc` to output producer
-    /// Подключите колодки, открытые `fallbacksrc`, к нашим производителям вывода
+
+    /// Connect pads exposed by `fallbacksrc` to our output producers
     #[instrument(level = "debug", name = "connecting", skip(pipeline, is_video, pad, video_producer, audio_producer), fields(pad = %pad.name()))]
     fn connect_pad(
         id: String,
@@ -141,8 +128,6 @@ impl Source {
         video_producer: &Option<StreamProducer>,
         audio_producer: &Option<StreamProducer>,
     ) -> Result<Option<gst::Element>, Error> {
-        // Handle pad connections based on audio or video type.
-        // Управление подключениями пэдов в зависимомти от типа аудио или видео
         if is_video {
             if let Some(video_producer) = video_producer {
                 let deinterlace = make_element("deinterlace", None)?;
@@ -187,7 +172,7 @@ impl Source {
         }
     }
 
-    /// Прокрутите pipeline трубопровод заранее (по умолчанию за 10 секунд до начала сигнала).
+    /// Preroll the pipeline ahead of time (by default 10 seconds before cue time)
     #[instrument(level = "debug", name = "prerolling", skip(self, ctx), fields(id = %self.id))]
     fn preroll(&mut self, ctx: &mut Context<Self>) -> Result<StateChangeResult, Error> {
         // let pipeline = gst::Pipeline::new(Some(&self.id.to_string()));
@@ -202,7 +187,7 @@ impl Source {
 
         let src = make_element("fallbacksrc", None)?;
         pipeline.add(&src)?;
-        println!("185 >>>>>>>src.set_property to uri: {}", &self.uri);
+
         src.set_property("uri", &self.uri);
         src.set_property("manual-unblock", &true);
         src.set_property("immediate-fallback", &true);
@@ -276,7 +261,6 @@ impl Source {
                 addr.do_send(NewSourceBinMessage(element.clone()));
             }
         });
-        println!("259 now prerolling to uri: {}", &self.uri);
 
         debug!("now prerolling");
 
@@ -303,11 +287,11 @@ impl Source {
                 id, err
             )));
         }
-        println!("285 ok prerolling to uri: {}", &self.uri);
+
         Ok(StateChangeResult::Success)
     }
 
-    /// Разблокируйте трубопровод прероллинга
+    /// Unblock a prerolling pipeline
     #[instrument(level = "debug", name = "unblocking", skip(self), fields(id = %self.id))]
     fn unblock(&mut self, ctx: &mut Context<Self>) -> Result<StateChangeResult, Error> {
         let media = self.media.as_ref().unwrap();
@@ -517,7 +501,7 @@ impl Schedulable<Self> for Source {
 /// Sent by the [`Source`] to notify itself that a stream started or ended
 #[derive(Debug)]
 struct StreamMessage {
-    /// Начинается или заканчивается поток
+    /// Whether the stream is starting or ending
     starting: bool,
 }
 
@@ -575,7 +559,7 @@ impl Handler<ErrorMessage> for Source {
     }
 }
 
-/// Отправляется [Источником], чтобы уведомить себя о том, что новый `fallbackswitch`
+/// Sent by the [`Source`] to notify itself that a new `fallbackswitch`
 /// was added in `fallbacksrc`
 #[derive(Debug)]
 struct NewSwitchMessage(gst::Element);
@@ -611,7 +595,7 @@ impl Handler<NewSourceBinMessage> for Source {
     }
 }
 
-/// Отправляется [`Источником`], чтобы уведомить себя о том, что статус одного
+/// Sent by the [`Source`] to notify itself that the status of one
 /// of the monitored elements changed
 #[derive(Debug)]
 struct SourceStatusMessage;
@@ -682,8 +666,8 @@ impl Handler<RemoveControlPointMessage> for Source {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::utils::get_now;
-    use crate::utils::tests::*;
+    use crate::shared::get_now;
+    use crate::shared::tests::*;
     use std::collections::VecDeque;
     use test_log::test;
 

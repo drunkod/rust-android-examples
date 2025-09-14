@@ -1,4 +1,5 @@
-//! Configuration options for the application
+use structopt::StructOpt;
+/// Configuration options for the application
 
 use std::path::PathBuf;
 use structopt::StructOpt;

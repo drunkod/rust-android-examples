@@ -1,3 +1,4 @@
+use gst::prelude::*;
 // Copyright (C) 2020 Mathieu Duponchelle <mathieu@centricular.com>
 // Copyright (C) 2021 Jan Schmidt <jan@centricular.com>
 //

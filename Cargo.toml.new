@@ -1,0 +1,64 @@
+[package]
+name = "rust-android-refactored"
+version = "0.1.0"
+edition = "2021"
+resolver = "2"
+
+[dependencies]
+log = "0.4"
+egui-winit = { version = "0.23", features = [ "android-game-activity" ] }
+wgpu = "0.17.1"
+pollster = "0.2"
+egui = "0.23"
+eframe = { version = "0.23", features = [ "wgpu", "android-game-activity"] }
+egui_demo_lib = "0.23"
+anyhow = "1"
+gst = { package = "gstreamer", version = "0.21.3", default-features = false }
+gst-base = { package = "gstreamer-base", version = "0.21.2"}
+gst-app = { package = "gstreamer-app" , version = "0.21.2"}
+gst-audio = { package = "gstreamer-audio" , version = "0.21.3"}
+gst-video = { package = "gstreamer-video",  version = "0.21.2"}
+gst-utils = { package = "gstreamer-utils", version = "0.21.2"}
+glib = "0.18.4"
+gio = "0.18"
+futures = "0.3"
+tokio = { version = "1.6.1", features = ["time", "test-util"] }
+actix = "0.13"
+actix-rt = "2"
+actix-web = { version = "4", features = ["openssl"] }
+actix-web-actors = "4"
+openssl-sys = "0.9.96"
+openssl = "0.10"
+tracing-actix-web = "0.5"
+tracing = { version = "0.1", features = ["log"] }
+tracing-actix = "0.4.0"
+tracing-futures = { version = "0.2", features = ["std-future"] }
+tracing-subscriber = { version = "0.3", features = ["registry", "env-filter"] }
+tracing-log = "0.1"
+tracing-error = "0.2"
+tracing-appender = "0.2"
+test-log = { version = "0.2", features = ["trace"], default-features = false }
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+structopt = "0.3"
+uuid = { version = "1.0", features = ["v4", "serde"] }
+chrono = { version = "0.4", features = ["serde"] }
+priority-queue = "1.1.0"
+smallvec = "1"
+parking_lot = "0.12"
+libffi-sys = "2.1.0"
+gst-base-sys = "0.21.2"
+libunwind = "0.0.1"
+gst-sys = "0.21.2"
+
+auteur-controlling = { path = "src/application/common" }
+
+[target.'cfg(not(target_os = "android"))'.dependencies]
+env_logger = "0.10"
+
+[target.'cfg(target_os = "android")'.dependencies]
+android_logger = "0.13.1"
+jni = { version = "0.21.1", default-features = false }
+
+[dev-dependencies]
+tempfile = "3.2.0"

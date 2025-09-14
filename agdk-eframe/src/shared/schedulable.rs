@@ -1,15 +1,17 @@
-//! Control the state of nodes
+use tracing::{debug, error, instrument, trace};
+use chrono::{DateTime, Utc};
+use anyhow::{anyhow, Error};
+use actix::prelude::*;
+/// Control the state of nodes
 
-use crate::utils::ErrorMessage;
+use super::ErrorMessage;
+use crate::domain::nodes::node::{NodeManager, NodeStatusMessage};
+use crate::shared::get_now;
 use actix::prelude::*;
 use anyhow::{anyhow, Error};
+use auteur_controlling::controller::State;
 use chrono::{DateTime, Utc};
 use tracing::{instrument, trace};
-
-use auteur_controlling::controller::State;
-
-use crate::nodes::node::{NodeManager, NodeStatusMessage};
-use crate::utils::get_now;
 
 /// State machine governing the progression of a [`node`](crate::node) state
 /// along a timeline

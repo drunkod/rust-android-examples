@@ -1,9 +1,23 @@
-//! A mixer processing node.
-//!
-//! A mixer can have multiple consumer slots, which will be routed
-//! through `compositor` and `audiomixer` elements.
-
+use serde::{Deserialize, Serialize};
+use tracing::{debug, error, instrument, trace};
+use gst::prelude::*;
+use anyhow::{anyhow, Error};
 use actix::prelude::*;
+/// A mixer processing node.
+///
+/// A mixer can have multiple consumer slots, which will be routed
+/// through `compositor` and `audiomixer` elements.
+
+use crate::shared::{
+    get_now, make_element,
+    property_controller::PropertyController,
+    schedulable::{Schedulable, StateChangeResult, StateMachine},
+    setting_controller::{Setting, SettingController, SettingSpec},
+    stream_producer::StreamProducer,
+    ErrorMessage,
+};
+use actix::prelude::*;
+use actix::MessageResult;
 use anyhow::{anyhow, Error};
 use gst::prelude::*;
 use gst_base::prelude::*;
@@ -17,11 +31,6 @@ use super::node::{
     AddControlPointMessage, ConsumerMessage, GetNodeInfoMessage, GetProducerMessage, NodeManager,
     NodeStatusMessage, RemoveControlPointMessage, ScheduleMessage, StartMessage, StopMessage,
     StoppedMessage,
-};
-use crate::utils::{
-    get_now, make_element, ErrorMessage, PipelineManager, PropertyController, Schedulable, Setting,
-    SettingController, SettingSpec, StateChangeResult, StateMachine, StopManagerMessage,
-    StreamProducer,
 };
 
 /// Represents one audio *or* video input connection
@@ -927,10 +936,9 @@ impl Mixer {
         let id = self.id.clone();
         self.pipeline.call_async(move |pipeline| {
             if let Err(err) = pipeline.set_state(gst::State::Playing) {
-                addr.do_send(ErrorMessage(format!(
-                    "Failed to start mixer {}: {}",
-                    id, err
-                )));
+                addr.do_send(ErrorMessage {
+                    message: format!("Failed to start mixer {}: {}", id, err),
+                });
             }
         });
 
@@ -1370,11 +1378,11 @@ impl Handler<ErrorMessage> for Mixer {
     type Result = ();
 
     fn handle(&mut self, msg: ErrorMessage, ctx: &mut Context<Self>) -> Self::Result {
-        error!("Got error message '{}' on destination {}", msg.0, self.id,);
+        error!("Got error message '{}' on destination {}", msg.message, self.id,);
 
         NodeManager::from_registry().do_send(NodeStatusMessage::Error {
             id: self.id.clone(),
-            message: msg.0,
+            message: msg.message,
         });
 
         gst::debug_bin_to_dot_file_with_ts(

@@ -1,18 +1,24 @@
-//! Implementation of a node management system
-//!
-//! Nodes are Actix actors in charge of building
-//! and scheduling the state of GStreamer pipelines.
-//!
-//! Nodes can produce and / or consume data, and are connected to one
-//! another through [`StreamProducer`](crate::utils::StreamProducer)
+use futures::prelude::*;
+use serde::{Deserialize, Serialize};
+use tracing::{debug, error, instrument, trace};
+use chrono::{DateTime, Utc};
+use gst::prelude::*;
+use anyhow::{anyhow, Error};
+use actix::prelude::*;
+/// Implementation of a node management system
+///
+/// Nodes are Actix actors in charge of building
+/// and scheduling the state of GStreamer pipelines.
+///
+/// Nodes can produce and / or consume data, and are connected to one
+/// another through [`StreamProducer`](crate::shared::StreamProducer)
 
+use crate::shared::stream_producer::StreamProducer;
 use super::destination::Destination;
 use super::mixer::Mixer;
 use super::source::Source;
-use crate::nodes::video_generator::VideoGenerator;
-use crate::utils::StreamProducer;
+use super::video_generator::VideoGenerator;
 use actix::prelude::*;
-use actix::WeakRecipient;
 use anyhow::{anyhow, Error};
 use auteur_controlling::controller::{
     Command, CommandResult, ControlPoint, DestinationFamily, Info, NodeInfo, State,
@@ -30,7 +36,7 @@ use tracing_futures::Instrument;
 ///
 /// Nodes can be producers, consumers or both. NodeManager knows
 /// how to make logical links from one to another, actual connection
-/// to [`producers`](crate::utils::StreamProducer) is delegated to the consumers
+/// to [`producers`](crate::shared::StreamProducer) is delegated to the consumers
 /// however, as they might want to only perform the connection once their
 /// state has progressed.
 ///
@@ -79,7 +85,7 @@ impl Message for CommandMessage {
     type Result = CommandResult;
 }
 
-/// Getter for [`stream producers`](crate::utils::StreamProducer),
+/// Getter for [`stream producers`](crate::shared::StreamProducer),
 /// sent from [`NodeManager`] to any producer node to connect them
 /// to consumers
 #[derive(Debug)]
@@ -91,7 +97,7 @@ impl Message for GetProducerMessage {
 
 /// Sent from [`NodeManager`] to any consumer node in order to
 /// let them connect and disconnect from
-/// [`stream producers`](crate::utils::StreamProducer), and to
+/// [`stream producers`](crate::shared::StreamProducer), and to
 /// control properties on individual slots
 pub enum ConsumerMessage {
     /// Lets the consumer perform a connection, it should store the
@@ -1027,7 +1033,7 @@ impl Handler<NodeStatusMessage> for NodeManager {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::utils::tests::*;
+    use crate::shared::tests::*;
     use test_log::test;
 
     #[actix_rt::test]

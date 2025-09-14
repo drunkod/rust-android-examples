@@ -1,19 +1,20 @@
-//! Interface with remote controller
-//!
-//! Receives JSON messages through websockets, conforming with
-//! [`this protocol`](auteur_controlling::controller)
+use uuid;
+use serde::{Deserialize, Serialize};
+use tracing::{debug, error, instrument, trace};
+use anyhow::{anyhow, Error};
+use actix::prelude::*;
+/// Interface with remote controller
+///
+/// Receives JSON messages through websockets, conforming with
+/// [`this protocol`](auteur_controlling::controller)
 
-use crate::nodes::node::{CommandMessage, NodeManager};
-
-use anyhow::{format_err, Error};
-
+use crate::domain::nodes::node::{CommandMessage, NodeManager};
 use actix::prelude::*;
 use actix_web::dev::ConnectionInfo;
 use actix_web_actors::ws;
-
-use tracing::{debug, error, instrument, trace};
-
+use anyhow::{format_err, Error};
 use auteur_controlling::controller::{Command, CommandResult, ControllerMessage, ServerMessage};
+use tracing::{debug, error, instrument, trace};
 
 /// Actor that represents an application controller.
 #[derive(Debug)]
@@ -60,7 +61,7 @@ impl Controller {
                     }
                     Err(err) => {
                         ctx.notify(ErrorMessage {
-                            msg: format!("Internal server error: {}", err),
+                            message: format!("Internal server error: {}", err),
                             command_id: Some(command_id),
                         });
                     }
@@ -84,7 +85,7 @@ impl Controller {
                     self.remote_addr, err
                 );
                 ctx.notify(ErrorMessage {
-                    msg: String::from("Internal processing error"),
+                    message: String::from("Internal processing error"),
                     command_id: None,
                 });
             }
@@ -145,7 +146,7 @@ impl StreamHandler<Result<ws::Message, ws::ProtocolError>> for Controller {
 #[derive(Debug)]
 struct ErrorMessage {
     /// Error message
-    msg: String,
+    message: String,
     /// Identifier of the command that caused the error
     command_id: Option<uuid::Uuid>,
 }
@@ -160,13 +161,13 @@ impl Handler<ErrorMessage> for Controller {
     fn handle(&mut self, msg: ErrorMessage, ctx: &mut ws::WebsocketContext<Self>) -> Self::Result {
         error!(
             "Got error message '{}' on controller {}",
-            msg.msg, self.remote_addr
+            msg.message, self.remote_addr
         );
 
         ctx.text(
             serde_json::to_string(&ServerMessage {
                 id: msg.command_id,
-                result: CommandResult::Error(msg.msg),
+                result: CommandResult::Error(msg.message),
             })
             .expect("Failed to serialize error message"),
         );
