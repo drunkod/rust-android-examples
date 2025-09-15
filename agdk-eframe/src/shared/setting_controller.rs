@@ -5,14 +5,10 @@ use gst::prelude::*;
 use anyhow::{anyhow, Error};
 /// Schedule "native" setting updates
 
-use anyhow::{anyhow, Error};
 use auteur_controlling::controller::{ControlMode, ControlPoint};
-use chrono::{DateTime, Utc};
-use gst::prelude::*;
 use priority_queue::PriorityQueue;
 use std::cmp::Reverse;
 use std::sync::{Arc, Mutex};
-use tracing::{instrument, trace};
 
 /// Specifies a setting typology (type, valid range)
 #[derive(Debug)]

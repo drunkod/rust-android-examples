@@ -51,10 +51,12 @@ pub struct Destination {
     video_slot: Option<ConsumerSlot>,
     /// Our state machine
     state_machine: StateMachine,
+}
+
 impl Actor for Destination {
     type Context = Context<Self>;
     #[instrument(level = "debug", name = "starting", skip(self, ctx), fields(id = %self.id))]
-    fn started(&mut self, ctx: &mut Self::Context) {
+    fn started(&mut self, ctx: &mut Context<Self>) {
         self.pipeline_manager = Some(
             PipelineManager::new(
                 self.pipeline.clone(),
@@ -65,7 +67,7 @@ impl Actor for Destination {
         );
     }
     #[instrument(level = "debug", name = "stopping", skip(self, ctx), fields(id = %self.id))]
-    fn stopping(&mut self, ctx: &mut Self::Context) -> Running {
+    fn stopping(&mut self, ctx: &mut Context<Self>) -> Running {
         self.stop_schedule(ctx);
         if self.wait_for_eos(ctx) {
             self.state_machine.state = State::Stopping;
@@ -74,16 +76,21 @@ impl Actor for Destination {
             debug!("no need to wait for EOS");
             Running::Stop
         }
+    }
     #[instrument(level = "debug", name = "stopped", skip(self, _ctx), fields(id = %self.id))]
     fn stopped(&mut self, _ctx: &mut Self::Context) {
         if let Some(manager) = self.pipeline_manager.take() {
             manager.do_send(StopManagerMessage);
+        }
         self.disconnect_consumers();
         NodeManager::from_registry().do_send(StoppedMessage {
             id: self.id.clone(),
             video_producer: None,
             audio_producer: None,
         });
+    }
+}
+
 impl Destination {
     /// Create a destination
     #[instrument(level = "debug", name = "creating")]
@@ -114,8 +121,8 @@ impl Destination {
         };
         for appsrc in [&video_appsrc, &audio_appsrc].iter().copied().flatten() {
             gst_utils::StreamProducer::configure_consumer(appsrc);
-        // let pipeline = gst::Pipeline::new(None);
-        let pipeline = gst::Pipeline::new();
+        }
+        let pipeline = gst::Pipeline::new(Some(&format!("destination-pipeline-{}", id)));
         Self {
             id: id.to_string(),
             family: family.clone(),
@@ -126,6 +133,8 @@ impl Destination {
             audio_slot: None,
             video_slot: None,
             state_machine: StateMachine::default(),
+        }
+    }
     /// Disconnect our consumer slots
     #[instrument(level = "debug", name = "disconnecting consumers", skip(self), fields(id = %self.id))]
     pub fn disconnect_consumers(&mut self) {
@@ -148,6 +157,7 @@ impl Destination {
                     self.id,
                 ));
             }
+        }
         if let Some(ref appsrc) = self.video_appsrc {
             if let Some(ref slot) = self.video_slot {
                 slot.producer.add_consumer(appsrc, &slot.id);
@@ -159,6 +169,7 @@ impl Destination {
             }
         }
         Ok(())
+    }
     /// RTMP family
     #[instrument(level = "debug", name = "streaming", skip(self, ctx), fields(id = %self.id))]
     fn start_rtmp_pipeline(
@@ -173,11 +184,11 @@ impl Destination {
         sink.set_property("location", uri);
         // Add off tls-validation rtmps:// for telegram
         sink.set_property("tls-validation-flags", &TlsCertificateFlags::NOT_ACTIVATED);
-    
+
         // Add debug println here
         println!("RTMP connection established to uri: {}", uri);
-        mux.set_property("streamable", &true);
-        mux.set_property("latency", &1000000000u64);
+        mux.set_property("streamable", &true)?;
+        mux.set_property("latency", &1000000000u64)?;
         mux.set_property(
             "start-time-selection",
             gst_base::AggregatorStartTimeSelection::First,
@@ -262,6 +273,8 @@ impl Destination {
                 let s = sink.property::<gst::Structure>("stats");
                 trace!(id = %id_clone, "rtmp destination statistics: {}", s.to_string());
                 println!("307 >>> RTMP destination statistics: {}", s.to_string());
+            }
+        });
         let addr = ctx.address();
         let id = self.id.clone();
         self.pipeline.call_async(move |pipeline| {
@@ -269,8 +282,10 @@ impl Destination {
                 addr.do_send(ErrorMessage {
                     message: format!("Failed to start destination {}: {}", id, err),
                 });
-                // Add debug print statement
-                println!("Pipeline set to Playing state successfully");
+            }
+        });
+        // Add debug print statement
+        println!("Pipeline set to Playing state successfully");
         Ok(StateChangeResult::Success)
         // .map(|result| {
         //     println!("RTMP connect successful: {:?}", result);
@@ -279,6 +294,7 @@ impl Destination {
         // .map_err(|err| {
         //     println!("RTMP connect failed: {:?}", err);
         //     err
+    }
     /// UDP family
     #[instrument(level = "debug", name = "playing on UDP local devices", skip(self, ctx), fields(id = %self.id))]
     fn start_udp_pipeline(
@@ -556,13 +572,30 @@ impl Destination {
     #[instrument(level = "debug", skip(self, ctx), fields(id = %self.id))]
     fn stop(&mut self, ctx: &mut Context<Self>) {
         ctx.stop();
+    }
+}
+
+use chrono::DateTime;
+use chrono::Utc;
 impl Schedulable<Self> for Destination {
     fn state_machine(&self) -> &StateMachine {
         &self.state_machine
+    }
     fn state_machine_mut(&mut self) -> &mut StateMachine {
         &mut self.state_machine
+    }
     fn node_id(&self) -> &str {
         &self.id
+    }
+    fn next_time(&self) -> Option<DateTime<Utc>> {
+        match self.state_machine.state {
+            State::Initial => self.state_machine.cue_time,
+            State::Starting => self.state_machine.cue_time,
+            State::Started => self.state_machine.end_time,
+            State::Stopping => None,
+            State::Stopped => None,
+        }
+    }
     fn transition(
         &mut self,
         ctx: &mut Context<Self>,
@@ -589,6 +622,7 @@ impl Schedulable<Self> for Destination {
         }
     }
 }
+
 impl Handler<ConsumerMessage> for Destination {
     type Result = MessageResult<ConsumerMessage>;
     fn handle(&mut self, msg: ConsumerMessage, _ctx: &mut Context<Self>) -> Self::Result {
@@ -609,6 +643,7 @@ impl Handler<ConsumerMessage> for Destination {
         }
     }
 }
+
 impl Handler<StartMessage> for Destination {
     type Result = MessageResult<StartMessage>;
     fn handle(&mut self, msg: StartMessage, ctx: &mut Context<Self>) -> Self::Result {
@@ -617,6 +652,7 @@ impl Handler<StartMessage> for Destination {
                 "Destination {} must have its audio slot connected before starting",
                 self.id
             )));
+        }
         if self.video_appsrc.is_some() && self.video_slot.is_none() {
             return MessageResult(Err(anyhow!(
                 "Destination {} must have its video slot connected before starting",
@@ -626,6 +662,7 @@ impl Handler<StartMessage> for Destination {
         MessageResult(self.start_schedule(ctx, msg.cue_time, msg.end_time))
     }
 }
+
 impl Handler<ErrorMessage> for Destination {
     type Result = ();
     fn handle(&mut self, msg: ErrorMessage, ctx: &mut Context<Self>) -> Self::Result {
@@ -644,16 +681,23 @@ impl Handler<ErrorMessage> for Destination {
         );
         self.stop(ctx);
     }
+}
+
 impl Handler<ScheduleMessage> for Destination {
     type Result = Result<(), Error>;
     fn handle(&mut self, msg: ScheduleMessage, ctx: &mut Context<Self>) -> Self::Result {
         self.reschedule(ctx, msg.cue_time, msg.end_time)
+    }
+}
+
 impl Handler<StopMessage> for Destination {
     type Result = Result<(), Error>;
     fn handle(&mut self, _msg: StopMessage, ctx: &mut Context<Self>) -> Self::Result {
         self.stop(ctx);
         Ok(())
     }
+}
+
 impl Handler<GetNodeInfoMessage> for Destination {
     type Result = Result<NodeInfo, Error>;
     fn handle(&mut self, _msg: GetNodeInfoMessage, _ctx: &mut Context<Self>) -> Self::Result {
@@ -665,6 +709,9 @@ impl Handler<GetNodeInfoMessage> for Destination {
             end_time: self.state_machine.end_time,
             state: self.state_machine.state,
         }))
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -698,12 +745,15 @@ mod tests {
             panic!("Wrong info type");
         }
     }
+}
+
 impl Handler<AddControlPointMessage> for Destination {
     type Result = Result<(), Error>;
     fn handle(&mut self, _msg: AddControlPointMessage, _ctx: &mut Context<Self>) -> Self::Result {
         Err(anyhow!("Destination has no property to control"))
     }
 }
+
 impl Handler<RemoveControlPointMessage> for Destination {
     type Result = ();
     fn handle(

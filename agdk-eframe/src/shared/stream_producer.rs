@@ -2,10 +2,8 @@ use tracing::{debug, error, instrument, trace};
 use gst::prelude::*;
 /// Data interface between nodes
 
-use gst::prelude::*;
 use std::collections::HashMap;
 use std::sync::{Arc, Mutex};
-use tracing::debug;
 
 #[derive(Debug)]
 struct StreamProducerInner {
@@ -40,9 +38,9 @@ impl StreamProducer {
             .remove(consumer_id)
             .is_some()
         {
-            debug!(appsink = %%self.appsink().name(), consumer_id = %consumer_id, "Removed consumer");
+            debug!(appsink = self.appsink().name().as_str(), consumer_id = consumer_id, "Removed consumer");
         } else {
-            debug!(appsink = %%self.appsink().name(), consumer_id = %consumer_id, "Consumer not found");
+            debug!(appsink = self.appsink().name().as_str(), consumer_id = consumer_id, "Consumer not found");
         }
     }
 

@@ -1,0 +1,305 @@
+warning: /app/agdk-eframe/Cargo.toml: file `/app/agdk-eframe/src/lib.rs` found to be present in multiple build targets:
+  * `lib` target `agdk_eframe`
+  * `bin` target `agdk-eframe-bin`
+   Compiling auteur-controlling v0.1.0 (/app/agdk-eframe/src/application/common)
+warning: unused import: `uuid::Uuid`
+ --> src/application/common/controller.rs:3:5
+  |
+3 | use uuid::Uuid;
+  |     ^^^^^^^^^^
+  |
+  = note: `#[warn(unused_imports)]` on by default
+
+warning: `auteur-controlling` (lib) generated 1 warning (run `cargo fix --lib -p auteur-controlling` to apply 1 suggestion)
+   Compiling agdk-eframe v0.1.0 (/app/agdk-eframe)
+error[E0432]: unresolved import `crate::domain::ports::media_pipeline`
+ --> src/infrastructure/gstreamer/pipeline_adapter.rs:1:27
+  |
+1 | use crate::domain::ports::media_pipeline::{MediaPipeline, PipelineState};
+  |                           ^^^^^^^^^^^^^^ could not find `media_pipeline` in `ports`
+
+error[E0412]: cannot find type `WeakRecipient` in this scope
+   --> src/domain/nodes/node.rs:56:32
+    |
+56  |     listeners: HashMap<String, WeakRecipient<NodeStatusMessage>>,
+    |                                ^^^^^^^^^^^^^
+    |
+   ::: /home/jules/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/actix-0.13.5/src/address/mod.rs:252:1
+    |
+252 | pub struct Recipient<M: Message>
+    | -------------------------------- similarly named struct `Recipient` defined here
+    |
+help: a struct with a similar name exists
+    |
+56  -     listeners: HashMap<String, WeakRecipient<NodeStatusMessage>>,
+56  +     listeners: HashMap<String, Recipient<NodeStatusMessage>>,
+    |
+help: consider importing this struct
+    |
+1   + use actix::WeakRecipient;
+    |
+
+error[E0412]: cannot find type `WeakRecipient` in this scope
+   --> src/domain/nodes/node.rs:656:20
+    |
+656 |         recipient: WeakRecipient<NodeStatusMessage>,
+    |                    ^^^^^^^^^^^^^
+    |
+   ::: /home/jules/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/actix-0.13.5/src/address/mod.rs:252:1
+    |
+252 | pub struct Recipient<M: Message>
+    | -------------------------------- similarly named struct `Recipient` defined here
+    |
+help: a struct with a similar name exists
+    |
+656 -         recipient: WeakRecipient<NodeStatusMessage>,
+656 +         recipient: Recipient<NodeStatusMessage>,
+    |
+help: consider importing this struct
+    |
+1   + use actix::WeakRecipient;
+    |
+
+warning: unused import: `std::env`
+ --> src/lib.rs:5:5
+  |
+5 | use std::env;
+  |     ^^^^^^^^
+  |
+  = note: `#[warn(unused_imports)]` on by default
+
+warning: unused imports: `Deserialize` and `Serialize`
+ --> src/domain/nodes/mixer.rs:1:13
+  |
+1 | use serde::{Deserialize, Serialize};
+  |             ^^^^^^^^^^^  ^^^^^^^^^
+
+warning: unused import: `State`
+ --> src/domain/nodes/node.rs:4:78
+  |
+4 |     Command, CommandResult, ControlPoint, DestinationFamily, Info, NodeInfo, State,
+  |                                                                              ^^^^^
+
+warning: unused import: `error`
+  --> src/domain/nodes/node.rs:12:22
+   |
+12 | use tracing::{debug, error, info, instrument, trace};
+   |                      ^^^^^
+
+warning: unused imports: `NativeOptions` and `Renderer`
+ --> src/presentation/gui/mod.rs:2:14
+  |
+2 | use eframe::{NativeOptions, Renderer};
+  |              ^^^^^^^^^^^^^  ^^^^^^^^
+
+warning: unused imports: `Actor`, `Addr`, and `SystemService`
+ --> src/presentation/api/server.rs:4:13
+  |
+4 | use actix::{Actor, Addr, SystemService};
+  |             ^^^^^  ^^^^  ^^^^^^^^^^^^^
+
+warning: unused imports: `HttpRequest`, `Responder`, and `error`
+ --> src/presentation/api/server.rs:5:17
+  |
+5 | use actix_web::{error, web, App, HttpRequest, HttpResponse, HttpServer, Responder};
+  |                 ^^^^^            ^^^^^^^^^^^                            ^^^^^^^^^
+
+warning: unused import: `actix_web_actors::ws`
+ --> src/presentation/api/server.rs:6:5
+  |
+6 | use actix_web_actors::ws;
+  |     ^^^^^^^^^^^^^^^^^^^^
+
+warning: unused import: `auteur_controlling::controller::Command`
+ --> src/presentation/api/server.rs:8:5
+  |
+8 | use auteur_controlling::controller::Command;
+  |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: unused imports: `debug` and `error`
+ --> src/presentation/api/server.rs:9:11
+  |
+9 | use log::{debug, error};
+  |           ^^^^^  ^^^^^
+
+warning: unused import: `Arc`
+  --> src/presentation/api/server.rs:11:17
+   |
+11 | use std::sync::{Arc, Mutex};
+   |                 ^^^
+
+warning: unused import: `tracing`
+  --> src/presentation/api/server.rs:12:5
+   |
+12 | use tracing;
+   |     ^^^^^^^
+
+warning: unused imports: `Node` and `self`
+  --> src/presentation/api/server.rs:15:34
+   |
+15 | use crate::domain::nodes::node::{self, Node};
+   |                                  ^^^^  ^^^^
+
+warning: unused import: `error`
+ --> src/shared/pipeline_manager.rs:2:22
+  |
+2 | use tracing::{debug, error, instrument, trace};
+  |                      ^^^^^
+
+warning: unused import: `Deserialize`
+ --> src/shared/property_controller.rs:1:13
+  |
+1 | use serde::{Deserialize, Serialize};
+  |             ^^^^^^^^^^^
+
+warning: unused imports: `debug` and `error`
+ --> src/shared/property_controller.rs:2:15
+  |
+2 | use tracing::{debug, error, instrument, trace};
+  |               ^^^^^  ^^^^^
+
+warning: unused import: `std::time::Duration`
+ --> src/shared/schedulable.rs:5:5
+  |
+5 | use std::time::Duration;
+  |     ^^^^^^^^^^^^^^^^^^^
+
+warning: unused imports: `Deserialize` and `Serialize`
+ --> src/shared/setting_controller.rs:1:13
+  |
+1 | use serde::{Deserialize, Serialize};
+  |             ^^^^^^^^^^^  ^^^^^^^^^
+
+warning: unused imports: `debug` and `error`
+ --> src/shared/setting_controller.rs:2:15
+  |
+2 | use tracing::{debug, error, instrument, trace};
+  |               ^^^^^  ^^^^^
+
+warning: unused imports: `error`, `instrument`, and `trace`
+ --> src/shared/stream_producer.rs:1:22
+  |
+1 | use tracing::{debug, error, instrument, trace};
+  |                      ^^^^^  ^^^^^^^^^^  ^^^^^
+
+warning: unused import: `gst::prelude::*`
+  --> src/fallbackswitch/mod.rs:15:5
+   |
+15 | use gst::prelude::*;
+   |     ^^^^^^^^^^^^^^^
+
+warning: unused import: `gst::prelude::*`
+  --> src/fallbackswitch/fallbacksrc/custom_source/imp.rs:12:5
+   |
+12 | use gst::prelude::*;
+   |     ^^^^^^^^^^^^^^^
+
+warning: unused import: `gst::prelude::*`
+  --> src/fallbackswitch/fallbacksrc/imp.rs:11:5
+   |
+11 | use gst::prelude::*;
+   |     ^^^^^^^^^^^^^^^
+
+warning: unused import: `gst::ClockTime`
+  --> src/fallbackswitch/fallbacksrc/imp.rs:13:5
+   |
+13 | use gst::ClockTime;
+   |     ^^^^^^^^^^^^^^
+
+warning: unexpected `cfg` condition value: `doc`
+   --> src/fallbackswitch/fallbacksrc/imp.rs:722:19
+    |
+722 |             #[cfg(feature = "doc")]
+    |                   ^^^^^^^^^^^^^^^ help: remove the condition
+    |
+    = note: no expected values for `feature`
+    = help: consider adding `doc` as a feature in `Cargo.toml`
+    = note: see <https://doc.rust-lang.org/nightly/rustc/check-cfg/cargo-specifics.html> for more information about checking conditional configuration
+    = note: `#[warn(unexpected_cfgs)]` on by default
+
+warning: unused import: `gst::prelude::*`
+  --> src/fallbackswitch/fallbackswitch/imp.rs:12:5
+   |
+12 | use gst::prelude::*;
+   |     ^^^^^^^^^^^^^^^
+
+warning: unexpected `cfg` condition value: `v1_20`
+   --> src/fallbackswitch/fallbackswitch/imp.rs:992:19
+    |
+992 |             #[cfg(feature = "v1_20")]
+    |                   ^^^^^^^^^^^^^^^^^ help: remove the condition
+    |
+    = note: no expected values for `feature`
+    = help: consider adding `v1_20` as a feature in `Cargo.toml`
+    = note: see <https://doc.rust-lang.org/nightly/rustc/check-cfg/cargo-specifics.html> for more information about checking conditional configuration
+
+warning: unexpected `cfg` condition value: `doc`
+  --> src/fallbackswitch/fallbackswitch/mod.rs:31:11
+   |
+31 |     #[cfg(feature = "doc")]
+   |           ^^^^^^^^^^^^^^^ help: remove the condition
+   |
+   = note: no expected values for `feature`
+   = help: consider adding `doc` as a feature in `Cargo.toml`
+   = note: see <https://doc.rust-lang.org/nightly/rustc/check-cfg/cargo-specifics.html> for more information about checking conditional configuration
+
+error[E0107]: enum takes 0 generic arguments but 2 generic arguments were supplied
+  --> src/application/services/node_service.rs:8:28
+   |
+8  |     nodes: HashMap<String, Node<GStreamerPipeline, GStreamerStreamProducer>>,
+   |                            ^^^^-------------------------------------------- help: remove the unnecessary generics
+   |                            |
+   |                            expected 0 generic arguments
+   |
+note: enum defined here, with 0 generic parameters
+  --> src/domain/nodes/node.rs:62:10
+   |
+62 | pub enum Node {
+   |          ^^^^
+
+error[E0599]: no variant or associated item named `new` found for enum `node::Node` in the current scope
+  --> src/application/services/node_service.rs:21:26
+   |
+21 |         let node = Node::new(id.clone(), pipeline);
+   |                          ^^^ variant or associated item not found in `node::Node`
+   |
+  ::: src/domain/nodes/node.rs:62:1
+   |
+62 | pub enum Node {
+   | ------------- variant or associated item `new` not found for this enum
+   |
+   = help: items from traits can only be used if the trait is implemented and in scope
+   = note: the following traits define an item `new`, perhaps you need to implement one of them:
+           candidate #1: `HashMapExt`
+           candidate #2: `HashSetExt`
+           candidate #3: `brotli::enc::backward_references::hash_to_binary_tree::Allocable`
+           candidate #4: `brotli::enc::threading::AnyBoxConstructor`
+           candidate #5: `crypto_common::KeyInit`
+           candidate #6: `crypto_common::KeyIvInit`
+           candidate #7: `digest::VariableOutput`
+           candidate #8: `digest::core_api::VariableOutputCore`
+           candidate #9: `digest::digest::Digest`
+           candidate #10: `foldhash::convenience::HashMapExt`
+           candidate #11: `foldhash::convenience::HashSetExt`
+           candidate #12: `gstreamer::subclass::prelude::ObjectSubclass`
+           candidate #13: `itertools::adaptors::coalesce::CountItem`
+           candidate #14: `parking_lot_core::thread_parker::ThreadParkerT`
+           candidate #15: `rand::distr::uniform::UniformSampler`
+           candidate #16: `rand::distributions::uniform::UniformSampler`
+           candidate #17: `typenum::marker_traits::Bit`
+
+error[E0046]: not all trait items implemented, missing: `next_time`
+    --> src/domain/nodes/mixer.rs:1185:1
+     |
+1185 | impl Schedulable<Self> for Mixer {
+     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ missing `next_time` in implementation
+     |
+    ::: src/shared/schedulable.rs:38:5
+     |
+38   |     fn next_time(&self) -> Option<DateTime<Utc>>;
+     |     --------------------------------------------- `next_time` from trait
+
+Some errors have detailed explanations: E0046, E0107, E0412, E0432, E0599.
+For more information about an error, try `rustc --explain E0046`.
+warning: `agdk-eframe` (lib) generated 28 warnings
+error: could not compile `agdk-eframe` (lib) due to 6 previous errors; 28 warnings emitted

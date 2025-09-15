@@ -6,15 +6,11 @@ use anyhow::{anyhow, Error};
 /// Schedule gst::Object property updates
 
 use gst::glib::types::Type;
-use gst::prelude::*;
 use priority_queue::PriorityQueue;
 use std::cmp::Reverse;
 use std::collections::HashMap;
 
-use anyhow::{anyhow, Error};
 use auteur_controlling::controller::{ControlMode, ControlPoint};
-use chrono::{DateTime, Utc};
-use tracing::{instrument, trace};
 
 /// Represents a controller for a property
 #[derive(Debug)]
@@ -106,7 +102,7 @@ impl PropertyController {
             if do_trace {
                 let new = self.obj.property_value(self.propname.as_str());
 
-                trace!(obj = %%self.obj.name(), property = %self.propname, "Synchronized controller: {:?} -> {:?}", initial, new);
+                trace!(obj = self.obj.name().as_str(), property = self.propname.as_str(), "Synchronized controller: {:?} -> {:?}", initial, new);
             }
         }
 

@@ -59,7 +59,7 @@ pub struct NodeManager {
 
 /// All the node types NodeManager supports
 #[derive(Clone)]
-enum Node {
+pub enum Node {
     VideoGenerator(Addr<VideoGenerator>),
     /// A source node is a producer
     Source(Addr<Source>),

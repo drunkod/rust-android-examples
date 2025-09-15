@@ -1,14 +1,11 @@
-use uuid;
 use serde::{Deserialize, Serialize};
 use chrono::{DateTime, Utc};
+use uuid::Uuid;
 /// Definition of the service protocol
 ///
 /// WARNING: unstable
 
-use chrono::{offset::Utc, DateTime};
-use serde::{Deserialize, Serialize};
 use std::{cmp::Ordering, collections::HashMap};
-use uuid;
 
 fn default_as_true() -> bool {
     true

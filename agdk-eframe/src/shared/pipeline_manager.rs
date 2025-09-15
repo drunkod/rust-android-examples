@@ -5,12 +5,8 @@ use actix::prelude::*;
 /// Helper gst::Pipeline wrapper
 
 use crate::shared::ErrorMessage;
-use actix::prelude::*;
 use actix::WeakRecipient;
 use futures::channel::oneshot;
-use futures::prelude::*;
-use gst::prelude::*;
-use tracing::{debug, instrument, trace};
 
 /// Maps GStreamer messages for consumption by a [`PipelineManager`]
 /// actor
@@ -138,7 +134,7 @@ impl StreamHandler<BusMessage> for PipelineManager {
                                 .unwrap_or("UNKNOWN"),
                             err,
                             dbg
-                        )));
+                        )});
                     } else {
                         recipient.do_send(ErrorMessage { message: format!(
                             "Got error from {}: {}",
@@ -147,7 +143,7 @@ impl StreamHandler<BusMessage> for PipelineManager {
                                 .as_deref()
                                 .unwrap_or("UNKNOWN"),
                             err
-                        )));
+                        )});
                     }
                 }
 

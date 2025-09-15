@@ -34,7 +34,7 @@ pub fn make_element(element: &str, name: Option<&str>) -> Result<gst::Element, E
             anyhow!(
                 "Failed to create element {}: {}",
                 element,
-                err.message.as_ref().unwrap_or(&"Unknown error".to_string())  // Fix: handle Option properly
+                &*err.message
             )
         })?;
 
