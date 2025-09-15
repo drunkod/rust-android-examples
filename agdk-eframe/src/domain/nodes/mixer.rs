@@ -3,6 +3,7 @@ use tracing::{debug, error, instrument, trace};
 use gst::prelude::*;
 use anyhow::{anyhow, Error};
 use actix::prelude::*;
+use chrono::{DateTime, Utc};
 /// A mixer processing node.
 ///
 /// A mixer can have multiple consumer slots, which will be routed
@@ -1192,6 +1193,20 @@ impl Schedulable<Self> for Mixer {
     fn node_id(&self) -> &str {
         &self.id
     }
+
+    fn next_time(&self) -> Option<DateTime<Utc>> {
+        match self.state_machine.state {
+            State::Initial => self
+                .state_machine
+                .cue_time
+                .map(|cue_time| cue_time - chrono::Duration::seconds(10)),
+            State::Starting => self.state_machine.cue_time,
+            State::Started => self.state_machine.end_time,
+            State::Stopping => None,
+            State::Stopped => None,
+        }
+    }
+
     fn transition(
         &mut self,
         ctx: &mut Context<Self>,

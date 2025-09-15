@@ -12,3 +12,4 @@ pub enum PipelineState {
     Ready,
     Playing,
     Paused,
+}

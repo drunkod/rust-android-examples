@@ -1,4 +1,5 @@
 use actix::prelude::*;
+use actix::WeakRecipient;
 use anyhow::{anyhow, Error};
 use auteur_controlling::controller::{
     Command, CommandResult, ControlPoint, DestinationFamily, Info, NodeInfo, State,
