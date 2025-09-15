@@ -9,10 +9,6 @@ edition = "2021"
 authors = ["Your Name <your.email@example.com>"]
 license = "MIT"
 
-[[bin]]
-name = "agdk-eframe-bin"
-path = "src/lib.rs"
-
 [lib]
 crate-type = ["cdylib", "rlib"]
 name = "agdk_eframe"

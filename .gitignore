@@ -20,3 +20,5 @@ gstreamer-android/gcfhvdbcwp4s70wqgs4fdfb744lgl43i-libunwind-1.6.2/lib/libunwind
 gstreamer-android/gcfhvdbcwp4s70wqgs4fdfb744lgl43i-libunwind-1.6.2/lib/libunwind.so.8
 gstreamer-android/gcfhvdbcwp4s70wqgs4fdfb744lgl43i-libunwind-1.6.2/lib/libunwind.so.8.0.1
 scripts/__pycache__/node.cpython-311.pyc
+target/
+agdk-eframe/target

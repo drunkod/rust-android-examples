@@ -30,14 +30,6 @@ pub fn _main(mut options: NativeOptions) -> eframe::Result<()> {
     )
 }
 
-#[cfg(not(target_os = "android"))]
-fn main() -> eframe::Result<()> {
-    env_logger::builder()
-        .filter_level(log::LevelFilter::Warn)
-        .parse_default_env()
-        .init();
-    _main(NativeOptions::default())
-}
 
 // Android entry point
 #[cfg(target_os = "android")]

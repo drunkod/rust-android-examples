@@ -1,7 +1,6 @@
-warning: /app/agdk-eframe/Cargo.toml: file `/app/agdk-eframe/src/lib.rs` found to be present in multiple build targets:
+warning: /home/user/rust-android-examples/agdk-eframe/Cargo.toml: file `/home/user/rust-android-examples/agdk-eframe/src/lib.rs` found to be present in multiple build targets:
   * `lib` target `agdk_eframe`
   * `bin` target `agdk-eframe-bin`
-   Compiling auteur-controlling v0.1.0 (/app/agdk-eframe/src/application/common)
 warning: unused import: `uuid::Uuid`
  --> src/application/common/controller.rs:3:5
   |
@@ -11,7 +10,7 @@ warning: unused import: `uuid::Uuid`
   = note: `#[warn(unused_imports)]` on by default
 
 warning: `auteur-controlling` (lib) generated 1 warning (run `cargo fix --lib -p auteur-controlling` to apply 1 suggestion)
-   Compiling agdk-eframe v0.1.0 (/app/agdk-eframe)
+   Compiling agdk-eframe v0.1.0 (/home/user/rust-android-examples/agdk-eframe)
 error[E0432]: unresolved import `crate::domain::ports::media_pipeline`
  --> src/infrastructure/gstreamer/pipeline_adapter.rs:1:27
   |
@@ -24,7 +23,7 @@ error[E0412]: cannot find type `WeakRecipient` in this scope
 56  |     listeners: HashMap<String, WeakRecipient<NodeStatusMessage>>,
     |                                ^^^^^^^^^^^^^
     |
-   ::: /home/jules/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/actix-0.13.5/src/address/mod.rs:252:1
+   ::: /home/user/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/actix-0.13.5/src/address/mod.rs:252:1
     |
 252 | pub struct Recipient<M: Message>
     | -------------------------------- similarly named struct `Recipient` defined here
@@ -45,7 +44,7 @@ error[E0412]: cannot find type `WeakRecipient` in this scope
 656 |         recipient: WeakRecipient<NodeStatusMessage>,
     |                    ^^^^^^^^^^^^^
     |
-   ::: /home/jules/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/actix-0.13.5/src/address/mod.rs:252:1
+   ::: /home/user/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/actix-0.13.5/src/address/mod.rs:252:1
     |
 252 | pub struct Recipient<M: Message>
     | -------------------------------- similarly named struct `Recipient` defined here
@@ -257,37 +256,6 @@ note: enum defined here, with 0 generic parameters
 62 | pub enum Node {
    |          ^^^^
 
-error[E0599]: no variant or associated item named `new` found for enum `node::Node` in the current scope
-  --> src/application/services/node_service.rs:21:26
-   |
-21 |         let node = Node::new(id.clone(), pipeline);
-   |                          ^^^ variant or associated item not found in `node::Node`
-   |
-  ::: src/domain/nodes/node.rs:62:1
-   |
-62 | pub enum Node {
-   | ------------- variant or associated item `new` not found for this enum
-   |
-   = help: items from traits can only be used if the trait is implemented and in scope
-   = note: the following traits define an item `new`, perhaps you need to implement one of them:
-           candidate #1: `HashMapExt`
-           candidate #2: `HashSetExt`
-           candidate #3: `brotli::enc::backward_references::hash_to_binary_tree::Allocable`
-           candidate #4: `brotli::enc::threading::AnyBoxConstructor`
-           candidate #5: `crypto_common::KeyInit`
-           candidate #6: `crypto_common::KeyIvInit`
-           candidate #7: `digest::VariableOutput`
-           candidate #8: `digest::core_api::VariableOutputCore`
-           candidate #9: `digest::digest::Digest`
-           candidate #10: `foldhash::convenience::HashMapExt`
-           candidate #11: `foldhash::convenience::HashSetExt`
-           candidate #12: `gstreamer::subclass::prelude::ObjectSubclass`
-           candidate #13: `itertools::adaptors::coalesce::CountItem`
-           candidate #14: `parking_lot_core::thread_parker::ThreadParkerT`
-           candidate #15: `rand::distr::uniform::UniformSampler`
-           candidate #16: `rand::distributions::uniform::UniformSampler`
-           candidate #17: `typenum::marker_traits::Bit`
-
 error[E0046]: not all trait items implemented, missing: `next_time`
     --> src/domain/nodes/mixer.rs:1185:1
      |
@@ -299,7 +267,7 @@ error[E0046]: not all trait items implemented, missing: `next_time`
 38   |     fn next_time(&self) -> Option<DateTime<Utc>>;
      |     --------------------------------------------- `next_time` from trait
 
-Some errors have detailed explanations: E0046, E0107, E0412, E0432, E0599.
+Some errors have detailed explanations: E0046, E0107, E0412, E0432.
 For more information about an error, try `rustc --explain E0046`.
 warning: `agdk-eframe` (lib) generated 28 warnings
-error: could not compile `agdk-eframe` (lib) due to 6 previous errors; 28 warnings emitted
+error: could not compile `agdk-eframe` (lib) due to 5 previous errors; 28 warnings emitted
