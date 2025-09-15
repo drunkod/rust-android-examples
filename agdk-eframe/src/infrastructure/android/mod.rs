@@ -1,4 +1,3 @@
-use std::env;
 use eframe::NativeOptions;
 #[cfg(target_os = "android")]
 use egui_winit::winit::platform::android::activity::AndroidApp;

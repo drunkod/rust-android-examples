@@ -1,8 +1,20 @@
+[workspace]
+members = [".", "agdk-eframe/src/application/common"]
+resolver = "2"
+
 [package]
-name = "rust-android-refactored"
+name = "agdk-eframe"
 version = "0.1.0"
 edition = "2021"
-resolver = "2"
+
+[[bin]]
+name = "agdk-eframe"
+path = "agdk-eframe/src/lib.rs"
+
+[lib]
+crate-type = ["cdylib", "rlib"]
+name = "agdk_eframe"
+path = "agdk-eframe/src/lib.rs"
 
 [dependencies]
 log = "0.4"
@@ -13,12 +25,13 @@ egui = "0.23"
 eframe = { version = "0.23", features = [ "wgpu", "android-game-activity"] }
 egui_demo_lib = "0.23"
 anyhow = "1"
-gst = { package = "gstreamer", version = "0.21.3", default-features = false }
-gst-base = { package = "gstreamer-base", version = "0.21.2"}
-gst-app = { package = "gstreamer-app" , version = "0.21.2"}
-gst-audio = { package = "gstreamer-audio" , version = "0.21.3"}
-gst-video = { package = "gstreamer-video",  version = "0.21.2"}
-gst-utils = { package = "gstreamer-utils", version = "0.21.2"}
+async-trait = "0.1"
+gst = { package = "gstreamer", version = "0.22.0", default-features = false }
+gst-base = { package = "gstreamer-base", version = "0.22.0"}
+gst-app = { package = "gstreamer-app" , version = "0.22.0"}
+gst-audio = { package = "gstreamer-audio" , version = "0.22.0"}
+gst-video = { package = "gstreamer-video",  version = "0.22.0"}
+gst-utils = { package = "gstreamer-utils", version = "0.22.0"}
 glib = "0.18.4"
 gio = "0.18"
 futures = "0.3"
@@ -46,12 +59,7 @@ chrono = { version = "0.4", features = ["serde"] }
 priority-queue = "1.1.0"
 smallvec = "1"
 parking_lot = "0.12"
-libffi-sys = "2.1.0"
-gst-base-sys = "0.21.2"
-libunwind = "0.0.1"
-gst-sys = "0.21.2"
-
-auteur-controlling = { path = "src/application/common" }
+auteur-controlling = { path = "agdk-eframe/src/application/common" }
 
 [target.'cfg(not(target_os = "android"))'.dependencies]
 env_logger = "0.10"

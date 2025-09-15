@@ -1,4 +1,3 @@
-use gst::prelude::*;
 // Copyright (C) 2020 Sebastian Dröge <sebastian@centricular.com>
 //
 // This Source Code Form is subject to the terms of the Mozilla Public License, v2.0.

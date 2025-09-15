@@ -1,8 +1,5 @@
-use tracing::{debug, error, instrument, trace};
-use anyhow::{anyhow, Error};
-use actix::prelude::*;
-/// Implementation of the HTTP service
-
+use crate::application::commands::create_source_command::CreateSourceCommand;
+use crate::application::services::node_service::NodeService;
 use crate::shared::config::Config;
 use actix::{Actor, Addr, SystemService};
 use actix_web::{error, web, App, HttpRequest, HttpResponse, HttpServer, Responder};
@@ -11,24 +8,38 @@ use anyhow;
 use auteur_controlling::controller::Command;
 use log::{debug, error};
 use openssl;
-use std::sync::Arc;
+use std::sync::{Arc, Mutex};
 use tracing;
 use tracing_actix_web;
 
-use crate::domain::nodes::node::{CommandMessage, NodeManager, StopMessage};
+use crate::domain::nodes::node::{self, Node};
 // Function to create a command
-async fn create_command(
-    node_manager: web::Data<Addr<NodeManager>>,
-    json: web::Json<Command>,
-) -> HttpResponse {
-    println!("#21 Create_command with json: {:?}", json.0);
-    let message = CommandMessage { command: json.0 };
-    let response = node_manager.send(message).await;
+// async fn create_command(
+//     node_manager: web::Data<Addr<NodeManager>>,
+//     json: web::Json<Command>,
+// ) -> HttpResponse {
+//     println!("#21 Create_command with json: {:?}", json.0);
+//     let message = CommandMessage { command: json.0 };
+//     let response = node_manager.send(message).await;
 
-    // Return a JSON response with the result of the operation
-    HttpResponse::Ok()
-        .content_type::<_>("application/json")
-        .body(format!("{:?}", response))
+//     // Return a JSON response with the result of the operation
+//     HttpResponse::Ok()
+//         .content_type::<_>("application/json")
+//         .body(format!("{:?}", response))
+// }
+
+pub async fn create_source(
+    service: web::Data<Mutex<NodeService>>,
+    command: web::Json<CreateSourceCommand>,
+) -> HttpResponse {
+    let mut service = service.lock().unwrap();
+    match service
+        .create_source(command.id.clone(), command.uri.clone())
+        .await
+    {
+        Ok(_) => HttpResponse::Ok().json("Success"),
+        Err(e) => HttpResponse::InternalServerError().json(e.to_string()),
+    }
 }
 
 // Function to start the server based on the passed `Config`.
@@ -36,14 +47,16 @@ pub async fn run(cfg: Config) -> Result<(), anyhow::Error> {
     log::debug!("Running server with config: {:?}", cfg);
     println!("#33 Running server with config: {:?}", cfg);
     // Initialize NodeManager
-    let node_manager = NodeManager::from_registry();
+    // let node_manager = NodeManager::from_registry();
+    let node_service = web::Data::new(Mutex::new(NodeService::new()));
     // Setup HTTP server
     let server = HttpServer::new(move || {
         App::new()
-        .app_data(web::Data::new(node_manager.clone())) // Share NodeManager across routes
-        .wrap(actix_web::middleware::Logger::default()) // Use Logger middleware
-        .wrap(tracing_actix_web::TracingLogger::default()) // Use TracingLogger middleware
-        .route("/command", web::post().to(create_command)) // Setup route to create_command
+            .app_data(node_service.clone()) // Share NodeService across routes
+            .wrap(actix_web::middleware::Logger::default()) // Use Logger middleware
+            .wrap(tracing_actix_web::TracingLogger::default()) // Use TracingLogger middleware
+            // .route("/command", web::post().to(create_command)) // Setup route to create_command
+            .route("/source", web::post().to(create_source))
     });
     // Setup server to use TLS if configured
     let server = if cfg.use_tls {
@@ -59,7 +72,7 @@ pub async fn run(cfg: Config) -> Result<(), anyhow::Error> {
                 .as_ref()
                 .expect("No certificate file given"),
         )?;
-        // Bind server with openssl if TLS is used    
+        // Bind server with openssl if TLS is used
         server.bind_openssl(format!("0.0.0.0:{}", cfg.port), builder)?
     } else {
         // Bind server without using openssl if TLS is not used
@@ -80,9 +93,9 @@ pub async fn run(cfg: Config) -> Result<(), anyhow::Error> {
     //         log::error!("Failed to start server: {:?}", e);
     //         return Err(anyhow::anyhow!(e));
     //     }
-    // }       
+    // }
     // When the server stops running, a StopMessage is sent to the NodeManager actor.
-    let _ = NodeManager::from_registry().send(StopMessage).await;
+    // let _ = NodeManager::from_registry().send(StopMessage).await;
     println!(" server running successfully");
     Ok(())
 }

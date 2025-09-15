@@ -1,4 +1,3 @@
-use gst::prelude::*;
 use eframe::egui;
 use eframe::{NativeOptions, Renderer};
 use std::sync::{Arc, atomic::{AtomicBool, Ordering}};

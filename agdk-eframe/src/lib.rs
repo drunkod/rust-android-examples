@@ -1,31 +1,27 @@
-use gst::prelude::*;
-use anyhow::{anyhow, Error};
-use actix::prelude::*;
+#![cfg_attr(target_os = "android", no_main)]
+
+use anyhow::Error;
+use eframe::{NativeOptions, Renderer};
+use std::env;
+
 pub mod application;
 pub mod domain;
 pub mod infrastructure;
 pub mod presentation;
 pub mod shared;
+// Note: fallbackswitch should be moved to infrastructure
+pub mod fallbackswitch;
 
-use eframe::{NativeOptions, Renderer};
-use std::env;
 use crate::shared::config::Config;
-use anyhow::{Error as Errors};
 
-/// Application entry point
-fn start_server(cfg: Config) -> Result<(), Errors> {
-    let cfg = Config::default();
-    
+pub fn start_server(cfg: Config) -> Result<(), Error> {
     gst::init()?;
-    // An Actix runtime system is created and used to run the server function
-    //  which is defined in the gateway::server module
-    let system: actix::prelude::SystemRunner = actix_rt::System::new();
+    let system = actix_rt::System::new();
     system.block_on(presentation::api::server::run(cfg))?;
-
     Ok(())
 }
 
-fn _main(mut options: NativeOptions) -> eframe::Result<()> {
+pub fn _main(mut options: NativeOptions) -> eframe::Result<()> {
     options.renderer = Renderer::Wgpu;
     eframe::run_native(
         "My egui App",
@@ -35,11 +31,14 @@ fn _main(mut options: NativeOptions) -> eframe::Result<()> {
 }
 
 #[cfg(not(target_os = "android"))]
-fn main() {
+fn main() -> eframe::Result<()> {
     env_logger::builder()
-        .filter_level(log::LevelFilter::Warn) // Default Log Level
+        .filter_level(log::LevelFilter::Warn)
         .parse_default_env()
         .init();
-
-    _main(NativeOptions::default());
+    _main(NativeOptions::default())
 }
+
+// Android entry point
+#[cfg(target_os = "android")]
+pub use infrastructure::android::android_main;
