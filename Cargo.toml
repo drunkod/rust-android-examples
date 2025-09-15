@@ -6,9 +6,11 @@ resolver = "2"
 name = "agdk-eframe"
 version = "0.1.0"
 edition = "2021"
+authors = ["Your Name <your.email@example.com>"]
+license = "MIT"
 
 [[bin]]
-name = "agdk-eframe"
+name = "agdk-eframe-bin"
 path = "agdk-eframe/src/lib.rs"
 
 [lib]
@@ -17,49 +19,77 @@ name = "agdk_eframe"
 path = "agdk-eframe/src/lib.rs"
 
 [dependencies]
+# Logging
 log = "0.4"
-egui-winit = { version = "0.23", features = [ "android-game-activity" ] }
-wgpu = "0.17.1"
-pollster = "0.2"
-egui = "0.23"
-eframe = { version = "0.23", features = [ "wgpu", "android-game-activity"] }
-egui_demo_lib = "0.23"
-anyhow = "1"
-async-trait = "0.1"
-gst = { package = "gstreamer", version = "0.22.0", default-features = false }
-gst-base = { package = "gstreamer-base", version = "0.22.0"}
-gst-app = { package = "gstreamer-app" , version = "0.22.0"}
-gst-audio = { package = "gstreamer-audio" , version = "0.22.0"}
-gst-video = { package = "gstreamer-video",  version = "0.22.0"}
-gst-utils = { package = "gstreamer-utils", version = "0.22.0"}
-glib = "0.18.4"
-gio = "0.18"
-futures = "0.3"
-tokio = { version = "1.6.1", features = ["time", "test-util"] }
-actix = "0.13"
-actix-rt = "2"
-actix-web = { version = "4", features = ["openssl"] }
-actix-web-actors = "4"
-openssl-sys = "0.9.96"
-openssl = "0.10"
-tracing-actix-web = "0.5"
+env_logger = "0.10"
 tracing = { version = "0.1", features = ["log"] }
+tracing-actix-web = "0.5"
 tracing-actix = "0.4.0"
 tracing-futures = { version = "0.2", features = ["std-future"] }
 tracing-subscriber = { version = "0.3", features = ["registry", "env-filter"] }
 tracing-log = "0.1"
 tracing-error = "0.2"
 tracing-appender = "0.2"
-test-log = { version = "0.2", features = ["trace"], default-features = false }
+
+# GUI
+egui = "0.23"
+egui-winit = { version = "0.23", features = ["android-game-activity"] }
+eframe = { version = "0.23", features = ["wgpu", "android-game-activity"] }
+egui_demo_lib = "0.23"
+wgpu = "0.17.1"
+pollster = "0.2"
+
+# Error handling
+anyhow = "1"
+
+# GStreamer
+gst = { package = "gstreamer", version = "0.21.0", default-features = false }
+gst-base = { package = "gstreamer-base", version = "0.21.0" }
+gst-app = { package = "gstreamer-app", version = "0.21.0" }
+gst-audio = { package = "gstreamer-audio", version = "0.21.0" }
+gst-video = { package = "gstreamer-video", version = "0.21.0" }
+gst-utils = { package = "gstreamer-utils", version = "0.21.0" }
+
+# GLib
+glib = "0.18.4"
+gio = "0.18"
+
+# Async runtime
+futures = "0.3"
+tokio = { version = "1.6.1", features = ["time", "test-util"] }
+actix = "0.13"
+actix-rt = "2"
+actix-web = { version = "4", features = ["openssl"] }
+actix-web-actors = "4"
+async-trait = "0.1"
+
+# SSL/TLS
+openssl-sys = "0.9.96"
+openssl = "0.10"
+
+# Serialization
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
+
+# CLI
 structopt = "0.3"
+
+# Utilities
 uuid = { version = "1.0", features = ["v4", "serde"] }
 chrono = { version = "0.4", features = ["serde"] }
 priority-queue = "1.1.0"
 smallvec = "1"
 parking_lot = "0.12"
+
+# FFI
+libffi-sys = "2.1.0"
+libunwind = "1.3.3"
+
+# Internal workspace dependency
 auteur-controlling = { path = "agdk-eframe/src/application/common" }
+
+# Test dependencies
+test-log = { version = "0.2", features = ["trace"], default-features = false }
 
 [target.'cfg(not(target_os = "android"))'.dependencies]
 env_logger = "0.10"
@@ -70,3 +100,20 @@ jni = { version = "0.21.1", default-features = false }
 
 [dev-dependencies]
 tempfile = "3.2.0"
+
+[profile.release]
+opt-level = 3
+lto = true
+codegen-units = 1
+
+[profile.dev]
+opt-level = 0
+
+[patch.crates-io]
+# Add any patches here if needed
+
+# Android-specific configuration
+[package.metadata.android]
+build_targets = ["aarch64-linux-android", "armv7-linux-androideabi", "x86_64-linux-android", "i686-linux-android"]
+min_sdk_version = 21
+target_sdk_version = 31

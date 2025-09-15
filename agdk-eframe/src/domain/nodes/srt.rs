@@ -107,7 +107,7 @@ impl Source {
                 let deinterlace = make_element("deinterlace", None)?;
                 pipeline.add(&deinterlace)?;
                 let appsink = video_producer.appsink();
-                debug!(appsink = %appsink.name(), "linking video stream");
+                debug!(appsink = %%appsink.name(), "linking video stream");
                 deinterlace.sync_state_with_parent()?;
                 let sinkpad = deinterlace.static_pad("sink").unwrap();
                 pad.link(&sinkpad)?;
@@ -121,7 +121,7 @@ impl Source {
             let level = make_element("level", None)?;
             pipeline.add_many(&[&aconv, &level])?;
             let appsink = audio_producer.appsink();
-            debug!(appsink = %appsink.name(), "linking audio stream to appsink");
+            debug!(appsink = %%appsink.name(), "linking audio stream to appsink");
             aconv.sync_state_with_parent()?;
             level.sync_state_with_parent()?;
             gst::Element::link_many(&[&aconv, &level, appsink.upcast_ref()])?;
@@ -178,7 +178,7 @@ impl Source {
                         addr.do_send(StreamMessage { starting: true });
                     }
                     Ok(None) => (),
-                    Err(err) => addr.do_send(ErrorMessage(format!(
+                    Err(err) => addr.do_send(ErrorMessage { message: format!(
                         "Failed to connect source stream: {:?}",
                         err
                     ))),
@@ -208,7 +208,7 @@ impl Source {
             n_streams: 0,
             source_bin: None,
         if let Err(err) = pipeline.set_state(gst::State::Playing) {
-            addr.do_send(ErrorMessage(format!(
+            addr.do_send(ErrorMessage { message: format!(
                 "Failed to start source {}: {}",
                 id, err
             )));

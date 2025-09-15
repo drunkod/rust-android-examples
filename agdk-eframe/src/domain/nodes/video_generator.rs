@@ -30,9 +30,11 @@ use crate::shared::{
 };
 use actix::MessageResult;
 use auteur_controlling::controller::{NodeInfo, SourceInfo, State};
-use super::node::{
-    AddControlPointMessage, GetNodeInfoMessage, GetProducerMessage, NodeManager, NodeStatusMessage,
+use super::messages::{
+    AddControlPointMessage, GetNodeInfoMessage, GetProducerMessage, NodeStatusMessage,
     RemoveControlPointMessage, ScheduleMessage, StartMessage, StopMessage, StoppedMessage,
+};
+use super::node::NodeManager;
 /// The pipeline and various GStreamer elements that the source
 /// optionally wraps, their lifetime is not directly bound to that
 /// of the source itself
@@ -100,7 +102,7 @@ impl VideoGenerator {
                 let deinterlace = make_element("deinterlace", None)?;
                 pipeline.add(&deinterlace)?;
                 let appsink = video_producer.appsink();
-                debug!(appsink = %appsink.name(), "linking video stream");
+                debug!(appsink = %%appsink.name(), "linking video stream");
                 deinterlace.sync_state_with_parent()?;
                 let sinkpad = deinterlace.static_pad("sink").unwrap();
                 pad.link(&sinkpad)?;

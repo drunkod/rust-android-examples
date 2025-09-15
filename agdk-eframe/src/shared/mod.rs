@@ -27,16 +27,18 @@ impl Message for ErrorMessage {
 
 // Utility functions
 pub fn make_element(element: &str, name: Option<&str>) -> Result<gst::Element, Error> {
-    gst::ElementFactory::make(element)
-        .name(name.unwrap_or(element))
+    let elementgst = gst::ElementFactory::make(element)
+        .name(name.unwrap_or(element))  // Fix: use name if provided, otherwise element
         .build()
         .map_err(|err| {
             anyhow!(
                 "Failed to create element {}: {}",
                 element,
-                err.message.unwrap_or_default()
+                err.message.as_ref().unwrap_or(&"Unknown error".to_string())  // Fix: handle Option properly
             )
-        })
+        })?;
+
+    Ok(elementgst)
 }
 
 pub fn get_now() -> DateTime<Utc> {

@@ -19,9 +19,10 @@ use crate::shared::{
 };
 use actix::MessageResult;
 use auteur_controlling::controller::{DestinationFamily, DestinationInfo, NodeInfo, State};
-use super::node::{
+use super::{
     AddControlPointMessage, ConsumerMessage, GetNodeInfoMessage, NodeManager, NodeStatusMessage,
     RemoveControlPointMessage, ScheduleMessage, StartMessage, StopMessage, StoppedMessage,
+};
 use gio::TlsCertificateFlags;
 /// Represents a potential connection to a producer
 struct ConsumerSlot {
@@ -33,6 +34,7 @@ struct ConsumerSlot {
 /// The Destination actor
 pub struct Destination {
     /// Unique identifier
+    id: String,
     /// Defines the nature of the destination
     family: DestinationFamily,
     /// The wrapped pipeline
@@ -94,10 +96,22 @@ impl Destination {
                     .unwrap()
                     .downcast::<gst_app::AppSrc>()
                     .unwrap(),
+            )
+        } else {
             None
         };
         let audio_appsrc = if audio {
+            Some(
+                gst::ElementFactory::make("appsrc")
                     .name(&format!("destination-audio-appsrc-{}", id))
+                    .build()
+                    .unwrap()
+                    .downcast::<gst_app::AppSrc>()
+                    .unwrap(),
+            )
+        } else {
+            None
+        };
         for appsrc in [&video_appsrc, &audio_appsrc].iter().copied().flatten() {
             gst_utils::StreamProducer::configure_consumer(appsrc);
         // let pipeline = gst::Pipeline::new(None);
@@ -117,7 +131,11 @@ impl Destination {
     pub fn disconnect_consumers(&mut self) {
         if let Some(slot) = self.audio_slot.take() {
             slot.producer.remove_consumer(&slot.id);
+        }
         if let Some(slot) = self.video_slot.take() {
+            slot.producer.remove_consumer(&slot.id);
+        }
+    }
     /// Connect our consumer slots to `StreamProducers`
     #[instrument(level = "debug", name = "connecting consumers", skip(self), fields(id = %self.id))]
     pub fn connect_consumers(&self) -> Result<(), Error> {
@@ -132,7 +150,14 @@ impl Destination {
             }
         if let Some(ref appsrc) = self.video_appsrc {
             if let Some(ref slot) = self.video_slot {
-                    "Destination {} must be connected on its input video slot before starting",
+                slot.producer.add_consumer(appsrc, &slot.id);
+            } else {
+                return Err(anyhow!(
+                    "Destination {} must have its video slot connected before starting",
+                    self.id,
+                ));
+            }
+        }
         Ok(())
     /// RTMP family
     #[instrument(level = "debug", name = "streaming", skip(self, ctx), fields(id = %self.id))]
@@ -156,7 +181,9 @@ impl Destination {
         mux.set_property(
             "start-time-selection",
             gst_base::AggregatorStartTimeSelection::First,
+        )?;
         gst::Element::link_many(&[&mux, &mux_queue, &sink])?;
+        if let Some(appsrc) = &self.video_appsrc {
             let vconv = make_element("videoconvert", None)?;
             let timecodestamper = make_element("timecodestamper", None)?;
             let timeoverlay = make_element("timeoverlay", None)?;
@@ -175,12 +202,14 @@ impl Destination {
             if venc.has_property("tune", None) {
                 venc.set_property_from_str("tune", "zerolatency");
             } else if venc.has_property("zerolatency", None) {
-                venc.set_property("zerolatency", &true);
+                venc.set_property("zerolatency", &true)?;
+            }
             if venc.has_property("key-int-max", None) {
-                venc.set_property("key-int-max", &30u32);
+                venc.set_property("key-int-max", &30u32)?;
             } else if venc.has_property("gop-size", None) {
-                venc.set_property("gop-size", &30i32);
-            vparse.set_property("config-interval", &-1i32);
+                venc.set_property("gop-size", &30i32)?;
+            }
+            vparse.set_property("config-interval", &-1i32)?;
             timecodestamper.set_property_from_str("source", "rtc");
             timeoverlay.set_property_from_str("time-mode", "time-code");
             venc_queue.set_properties(&[
@@ -189,33 +218,42 @@ impl Destination {
                 ("max-size-time", &(3 * gst::ClockTime::SECOND)),
             ]);
             gst::Element::link_many(&[
+                appsrc.upcast_ref(),
+                &vconv,
+                &timecodestamper,
+                &timeoverlay,
+                &venc,
+                &vparse,
+                &venc_queue,
                 &mux,
-            ])
-            .and_then(|()| {
-                // Your success action here
-                println!("266 >>>Video pipeline successfully linked");
-                Ok(())
-            })
-            .map_err(|err| anyhow!(
-                "270 >>>> Video pipeline Destination {} must have its audio slot connected before starting: {}",
-                self.id, err
-            ))?; 
-            println!("Video pipeline successfully linked");
-            println!("278 >>>>>Audio pipeline successfully linked");
+            ])?;
+        }
+        if let Some(appsrc) = &self.audio_appsrc {
             let aconv = make_element("audioconvert", None)?;
-            println!("280 >>>>>Audio pipeline successfully linked");
             let aresample = make_element("audioresample", None)?;
-            println!("282 >>>>>Audio pipeline successfully linked");
             let aenc = make_element("avenc_aac", None)?;
-            println!("284 >>>>>Audio pipeline successfully linked");
             let aenc_queue = make_element("queue", None)?;
-            println!("286 >>>>>Audio pipeline successfully linked");
+            self.pipeline.add_many(&[
+                appsrc.upcast_ref(),
                 &aconv,
                 &aresample,
                 &aenc,
                 &aenc_queue,
+            ])?;
             aenc_queue.set_properties(&[
-            println!("Audio pipeline successfully linked");
+                ("max-size-buffers", &0u32),
+                ("max-size-bytes", &0u32),
+                ("max-size-time", &(3 * gst::ClockTime::SECOND)),
+            ]);
+            gst::Element::link_many(&[
+                appsrc.upcast_ref(),
+                &aconv,
+                &aresample,
+                &aenc,
+                &aenc_queue,
+                &mux,
+            ])?;
+        }
         self.connect_consumers()?;
         let sink_clone = sink.downgrade();
         let id_clone = self.id.clone();
@@ -244,35 +282,81 @@ impl Destination {
     /// UDP family
     #[instrument(level = "debug", name = "playing on UDP local devices", skip(self, ctx), fields(id = %self.id))]
     fn start_udp_pipeline(
+        &mut self,
+        ctx: &mut Context<Self>,
         host: &str,
+    ) -> Result<StateChangeResult, Error> {
         let mux = make_element("mpegtsmux", None)?;
         let sink = make_element("udpsink", None)?;
-        // if let Ok((host, port)) = parse_udp_uri(uri) {
-        //     sink.set_property("host", &host);
-        //     sink.set_property("port", &port);
-        // } else {
-        //     return Err(anyhow!("Invalid UDP URI: {}", uri));
-        // }
-        // Set the host and port properties directly
         sink.set_property("host", host);
         sink.set_property("port", &(5005i32));
-        // sink.set_property("location", uri);
         println!("UDP connection established to host: {}", host);
-        // println!("UDP connection established to uri: {}", uri);
-        mux.set_property("alignment", &(7i32));
-        // mux.set_property("streamable", &true);
-        // mux.set_property("latency", &1000000000u64);
-        // mux.set_property(
-        //     "start-time-selection",
-        //     gst_base::AggregatorStartTimeSelection::First,
-        // );
+        mux.set_property("alignment", &(7i32))?;
+        self.pipeline.add_many(&[&mux, &sink])?;
+        if let Some(appsrc) = &self.video_appsrc {
+            let vconv = make_element("videoconvert", None)?;
+            let venc = make_element("nvh264enc", None).unwrap_or(make_element("x264enc", None)?);
+            let vparse = make_element("h264parse", None)?;
+            self.pipeline.add_many(&[
+                appsrc.upcast_ref(),
+                &vconv,
+                &venc,
+                &vparse,
+            ])?;
+            gst::Element::link_many(&[
+                appsrc.upcast_ref(),
+                &vconv,
+                &venc,
+                &vparse,
+                &mux,
+            ])?;
+        }
+        if let Some(appsrc) = &self.audio_appsrc {
+            let aconv = make_element("audioconvert", None)?;
+            let aresample = make_element("audioresample", None)?;
+            let aenc = make_element("avenc_aac", None)?;
+            self.pipeline.add_many(&[
+                appsrc.upcast_ref(),
+                &aconv,
+                &aresample,
+                &aenc,
+            ])?;
+            gst::Element::link_many(&[
+                appsrc.upcast_ref(),
+                &aconv,
+                &aresample,
+                &aenc,
+                &mux,
+            ])?;
+        }
+        self.connect_consumers()?;
+        let sink_clone = sink.downgrade();
+        let id_clone = self.id.clone();
+        ctx.run_interval(std::time::Duration::from_secs(1), move |_s, _ctx| {
+            if let Some(sink) = sink_clone.upgrade() {
+                let s = sink.property::<gst::Structure>("stats");
                 trace!(id = %id_clone, "udp destination statistics: {}", s.to_string());
-                println!("503 >>> UDP destination statistics: {}", s.to_string());
+            }
+        });
+        let addr = ctx.address();
+        let id = self.id.clone();
+        self.pipeline.call_async(move |pipeline| {
+            if let Err(err) = pipeline.set_state(gst::State::Playing) {
+                addr.do_send(ErrorMessage {
+                    message: format!("Failed to start destination {}: {}", id, err),
+                });
+            }
+        });
+        Ok(StateChangeResult::Success)
+    }
     /// LocalFile family
     #[instrument(level = "debug", name = "saving to local file", skip(self, ctx), fields(id = %self.id))]
     fn start_local_file_pipeline(
+        &mut self,
+        ctx: &mut Context<Self>,
         base_name: &str,
         max_size_time: Option<u32>,
+    ) -> Result<StateChangeResult, Error> {
         let multiqueue = make_element("multiqueue", None)?;
         let sink = make_element("splitmuxsink", None)?;
         self.pipeline.add_many(&[&multiqueue, &sink])?;
@@ -280,37 +364,87 @@ impl Destination {
             sink.set_property(
                 "max-size-time",
                 (max_size_time as u64) * gst::ClockTime::MSECOND,
-            );
-            sink.set_property("use-robust-muxing", &true);
+            )?;
+            sink.set_property("use-robust-muxing", &true)?;
             let mux = make_element("qtmux", None)?;
-            mux.set_property("reserved-moov-update-period", &gst::ClockTime::SECOND);
-            sink.set_property("muxer", &mux);
+            mux.set_property("reserved-moov-update-period", &gst::ClockTime::SECOND)?;
+            sink.set_property("muxer", &mux)?;
             let location = base_name.to_owned() + "%05d.mp4";
-            sink.set_property("location", &location);
+            sink.set_property("location", &location)?;
+        } else {
             let location = base_name.to_owned() + ".mp4";
+            sink.set_property("location", &location)?;
+        }
+        if let Some(appsrc) = &self.video_appsrc {
+            let vconv = make_element("videoconvert", None)?;
+            let venc = make_element("nvh264enc", None).unwrap_or(make_element("x264enc", None)?);
+            let vparse = make_element("h264parse", None)?;
             self.pipeline
                 .add_many(&[appsrc.upcast_ref(), &vconv, &venc, &vparse])?;
             gst::Element::link_many(&[appsrc.upcast_ref(), &vconv, &venc, &vparse])?;
             vparse.link_pads(None, &multiqueue, Some("sink_0"))?;
             multiqueue.link_pads(Some("src_0"), &sink, Some("video"))?;
+        }
+        if let Some(appsrc) = &self.audio_appsrc {
+            let aconv = make_element("audioconvert", None)?;
+            let aresample = make_element("audioresample", None)?;
+            let aenc = make_element("avenc_aac", None)?;
+            self.pipeline
                 .add_many(&[appsrc.upcast_ref(), &aconv, &aresample, &aenc])?;
             aenc.link_pads(None, &multiqueue, Some("sink_1"))?;
             multiqueue.link_pads(Some("src_1"), &sink, Some("audio_0"))?;
-            gst::Element::link_many(&[appsrc.upcast_ref(), &aconv, &aresample, &aenc])?;
+        }
+        self.connect_consumers()?;
+        let addr = ctx.address();
+        let id = self.id.clone();
+        self.pipeline.call_async(move |pipeline| {
+            if let Err(err) = pipeline.set_state(gst::State::Playing) {
+                addr.do_send(ErrorMessage {
+                    message: format!("Failed to start destination {}: {}", id, err),
+                });
+            }
+        });
+        Ok(StateChangeResult::Success)
+    }
     /// LocalPlayback family
     #[instrument(level = "debug", name = "playing on local devices", skip(self, ctx), fields(id = %self.id))]
     fn start_local_playback_pipeline(
+        &mut self,
+        ctx: &mut Context<Self>,
+    ) -> Result<StateChangeResult, Error> {
+        if let Some(appsrc) = &self.video_appsrc {
+            let vconv = make_element("videoconvert", None)?;
             let vqueue = make_element("queue", None)?;
             let vsink = make_element("autovideosink", None)?;
+            self.pipeline
                 .add_many(&[appsrc.upcast_ref(), &vqueue, &vconv, &vsink])?;
             gst::Element::link_many(&[appsrc.upcast_ref(), &vqueue, &vconv, &vsink])?;
+        }
+        if let Some(appsrc) = &self.audio_appsrc {
+            let aconv = make_element("audioconvert", None)?;
+            let aresample = make_element("audioresample", None)?;
             let aqueue = make_element("queue", None)?;
             let asink = make_element("autoaudiosink", None)?;
+            self.pipeline
                 .add_many(&[appsrc.upcast_ref(), &aqueue, &aconv, &aresample, &asink])?;
             gst::Element::link_many(&[appsrc.upcast_ref(), &aqueue, &aconv, &aresample, &asink])?;
+        }
+        self.connect_consumers()?;
+        let addr = ctx.address();
+        let id = self.id.clone();
+        self.pipeline.call_async(move |pipeline| {
+            if let Err(err) = pipeline.set_state(gst::State::Playing) {
+                addr.do_send(ErrorMessage {
+                    message: format!("Failed to start destination {}: {}", id, err),
+                });
+            }
+        });
+        Ok(StateChangeResult::Success)
+    }
     /// Implement Connect command
     #[instrument(level = "debug", name = "connecting", skip(self, video_producer, audio_producer), fields(id = %self.id))]
     fn connect(
+        &mut self,
         link_id: &str,
         video_producer: Option<StreamProducer>,
         audio_producer: Option<StreamProducer>,
@@ -318,26 +452,48 @@ impl Destination {
         let video_slot = if let Some(producer) = video_producer {
             if self.video_slot.is_some() {
                 return Err(anyhow!("destination already has a video producer"));
+            }
             if self.video_appsrc.is_some() {
                 Some(ConsumerSlot {
                     id: link_id.to_string(),
                     producer,
                 })
+            } else {
                 None
+            }
+        } else {
+            None
+        };
         let audio_slot = if let Some(producer) = audio_producer {
             if self.audio_slot.is_some() {
                 return Err(anyhow!("destination already has an audio producer"));
+            }
             if self.audio_appsrc.is_some() {
+                Some(ConsumerSlot {
+                    id: link_id.to_string(),
+                    producer,
+                })
+            } else {
+                None
+            }
+        } else {
+            None
+        };
         if audio_slot.is_none() && video_slot.is_none() {
             return Err(anyhow!(
                 "destination {} link {} must result in at least one audio / video connection",
                 self.id,
                 link_id
             ));
+        }
         if audio_slot.is_some() {
             self.audio_slot = audio_slot;
+        }
         if video_slot.is_some() {
             self.video_slot = video_slot;
+        }
+        Ok(())
+    }
     /// Implement Disconnect command
     #[instrument(level = "debug", name = "disconnecting", skip(self), fields(id = %self.id))]
     fn disconnect(&mut self, link_id: &str) -> Result<(), Error> {
@@ -346,11 +502,24 @@ impl Destination {
             self.id,
             link_id
         ));
+        if let Some(slot) = self.audio_slot.take() {
             if slot.id == link_id {
                 slot.producer.remove_consumer(&slot.id);
                 ret = Ok(());
+            } else {
                 self.audio_slot = Some(slot);
+            }
+        }
+        if let Some(slot) = self.video_slot.take() {
+            if slot.id == link_id {
+                slot.producer.remove_consumer(&slot.id);
+                ret = Ok(());
+            } else {
+                self.video_slot = Some(slot);
+            }
+        }
         ret
+    }
     /// Wait for EOS to propagate down our pipeline before stopping
     // Returns true if calling code should wait before fully stopping
     #[instrument(level = "debug", name = "checking if waiting for EOS is needed", skip(self, ctx), fields(id = %self.id))]
@@ -366,6 +535,8 @@ impl Destination {
                     appsrc.send_event(gst::event::Eos::new());
                 }
                 if let Some(ref appsrc) = self.audio_appsrc {
+                    appsrc.send_event(gst::event::Eos::new());
+                }
                 let fut = pipeline_manager
                     .send(WaitForEosMessage)
                     .into_actor(self)
@@ -379,6 +550,9 @@ impl Destination {
                     });
                 ctx.wait(fut);
                 true
+            }
+        }
+    }
     #[instrument(level = "debug", skip(self, ctx), fields(id = %self.id))]
     fn stop(&mut self, ctx: &mut Context<Self>) {
         ctx.stop();
@@ -390,7 +564,10 @@ impl Schedulable<Self> for Destination {
     fn node_id(&self) -> &str {
         &self.id
     fn transition(
+        &mut self,
+        ctx: &mut Context<Self>,
         target: State,
+    ) -> Result<StateChangeResult, Error> {
         match target {
             State::Initial => Ok(StateChangeResult::Skip),
             State::Starting => match self.family.clone() {
@@ -400,14 +577,18 @@ impl Schedulable<Self> for Destination {
                     max_size_time,
                 } => self.start_local_file_pipeline(ctx, &base_name, max_size_time),
                 DestinationFamily::LocalPlayback => self.start_local_playback_pipeline(ctx),
-                DestinationFamily::Udp { host }  => self.start_udp_pipeline(ctx, &host),
+                DestinationFamily::Udp { host } => self.start_udp_pipeline(ctx, &host),
             },
             State::Started => Ok(StateChangeResult::Success),
             State::Stopping => {
                 self.stop(ctx);
                 Ok(StateChangeResult::Success)
+            }
             // We claim back our state machine from there on
             State::Stopped => unreachable!(),
+        }
+    }
+}
 impl Handler<ConsumerMessage> for Destination {
     type Result = MessageResult<ConsumerMessage>;
     fn handle(&mut self, msg: ConsumerMessage, _ctx: &mut Context<Self>) -> Self::Result {
@@ -421,7 +602,13 @@ impl Handler<ConsumerMessage> for Destination {
             ConsumerMessage::Disconnect { slot_id } => MessageResult(self.disconnect(&slot_id)),
             ConsumerMessage::AddControlPoint { .. } => {
                 MessageResult(Err(anyhow!("destination slot cannot be controlled")))
+            }
             ConsumerMessage::RemoveControlPoint { .. } => {
+                MessageResult(Err(anyhow!("destination slot cannot be controlled")))
+            }
+        }
+    }
+}
 impl Handler<StartMessage> for Destination {
     type Result = MessageResult<StartMessage>;
     fn handle(&mut self, msg: StartMessage, ctx: &mut Context<Self>) -> Self::Result {
@@ -431,25 +618,42 @@ impl Handler<StartMessage> for Destination {
                 self.id
             )));
         if self.video_appsrc.is_some() && self.video_slot.is_none() {
+            return MessageResult(Err(anyhow!(
                 "Destination {} must have its video slot connected before starting",
+                self.id
+            )));
+        }
         MessageResult(self.start_schedule(ctx, msg.cue_time, msg.end_time))
+    }
+}
 impl Handler<ErrorMessage> for Destination {
     type Result = ();
     fn handle(&mut self, msg: ErrorMessage, ctx: &mut Context<Self>) -> Self::Result {
-        error!("Got error message '{}' on destination {}", msg.message, self.id,);
+        error!(
+            "Got error message '{}' on destination {}",
+            msg.message, self.id,
+        );
         NodeManager::from_registry().do_send(NodeStatusMessage::Error {
+            id: self.id.clone(),
             message: msg.message,
+        });
         gst::debug_bin_to_dot_file_with_ts(
             &self.pipeline,
             gst::DebugGraphDetails::all(),
-            format!("error-destination-{}", self.id),
+            &format!("error-destination-{}", self.id),
+        );
         self.stop(ctx);
+    }
 impl Handler<ScheduleMessage> for Destination {
     type Result = Result<(), Error>;
     fn handle(&mut self, msg: ScheduleMessage, ctx: &mut Context<Self>) -> Self::Result {
         self.reschedule(ctx, msg.cue_time, msg.end_time)
 impl Handler<StopMessage> for Destination {
+    type Result = Result<(), Error>;
     fn handle(&mut self, _msg: StopMessage, ctx: &mut Context<Self>) -> Self::Result {
+        self.stop(ctx);
+        Ok(())
+    }
 impl Handler<GetNodeInfoMessage> for Destination {
     type Result = Result<NodeInfo, Error>;
     fn handle(&mut self, _msg: GetNodeInfoMessage, _ctx: &mut Context<Self>) -> Self::Result {
@@ -480,18 +684,32 @@ mod tests {
         if let NodeInfo::Destination(dinfo) = info {
             assert_eq!(
                 dinfo.family,
+                DestinationFamily::LocalFile {
+                    base_name,
                     max_size_time: Some(5000),
+                }
+            );
             assert!(dinfo.audio_slot_id.is_none());
             assert!(dinfo.video_slot_id.is_none());
             assert!(dinfo.cue_time.is_none());
             assert!(dinfo.end_time.is_none());
             assert_eq!(dinfo.state, State::Initial);
+        } else {
             panic!("Wrong info type");
+        }
+    }
 impl Handler<AddControlPointMessage> for Destination {
+    type Result = Result<(), Error>;
     fn handle(&mut self, _msg: AddControlPointMessage, _ctx: &mut Context<Self>) -> Self::Result {
         Err(anyhow!("Destination has no property to control"))
+    }
+}
 impl Handler<RemoveControlPointMessage> for Destination {
+    type Result = ();
     fn handle(
+        &mut self,
         _msg: RemoveControlPointMessage,
         _ctx: &mut Context<Self>,
     ) -> Self::Result {
+    }
+}

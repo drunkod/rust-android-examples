@@ -21,10 +21,12 @@ use gst_base::prelude::*;
 use std::collections::HashMap;
 use std::sync::{Arc, Mutex, MutexGuard};
 use auteur_controlling::controller::{ControlPoint, MixerInfo, MixerSlotInfo, NodeInfo, State};
-use super::node::{
-    AddControlPointMessage, ConsumerMessage, GetNodeInfoMessage, GetProducerMessage, NodeManager,
+use super::messages::{
+    AddControlPointMessage, ConsumerMessage, GetNodeInfoMessage, GetProducerMessage,
     NodeStatusMessage, RemoveControlPointMessage, ScheduleMessage, StartMessage, StopMessage,
     StoppedMessage,
+};
+use super::node::NodeManager;
 /// Represents one audio *or* video input connection
 struct InputSlot {
     /// The producer we are connected to
@@ -44,6 +46,7 @@ struct ConsumerSlot {
     audio_slot: Option<InputSlot>,
     /// Volume of the `audiomixer` pad
     volume: f64,
+}
 /// Used from our `compositor::samples_selected` callback
 #[derive(Debug)]
 pub struct VideoMixingState {
@@ -59,25 +62,37 @@ pub struct VideoMixingState {
     last_pts: Option<gst::ClockTime>,
     /// For resizing our output video stream
     capsfilter: Option<gst::Element>,
+}
 /// Used from our `audiomixer::samples_selected` callback
 pub struct AudioMixingState {
+    /// Our slot controllers
+    slot_controllers: Option<HashMap<String, PropertyController>>,
+    /// The last observed PTS, for interpolating
+    last_pts: Option<gst::ClockTime>,
+}
 /// One audio or video output branch
 struct Output {
     /// The producer exposed for this output branch
+    producer: StreamProducer,
     /// The mixer for this output branch
     mixer: gst::Element,
     /// ID for internal logging
     id: String,
+}
 /// Video output branch
 struct VideoOutput {
     /// Output elements
     output: Output,
     /// Used for showing and hiding the base plate, and updating slot video controllers
     mixing_state: Arc<Mutex<VideoMixingState>>,
+}
 /// Audio output branch
 struct AudioOutput {
+    /// Output elements
+    output: Output,
     /// Used for updating slot audio controllers
     mixing_state: Arc<Mutex<AudioMixingState>>,
+}
 impl VideoOutput {
     /// Create a new video output
     #[instrument(level = "debug", name = "creating")]
@@ -331,6 +346,7 @@ impl AudioOutput {
 /// The Mixer actor
 pub struct Mixer {
     /// Unique identifier
+    id: String,
     /// The wrapped pipeline
     pipeline: gst::Pipeline,
     /// A helper for managing the pipeline
@@ -343,6 +359,7 @@ pub struct Mixer {
     state_machine: StateMachine,
     /// Our output settings
     settings: HashMap<String, Arc<Mutex<Setting>>>,
+}
 impl Actor for Mixer {
     type Context = Context<Self>;
     #[instrument(level = "debug", name = "starting", skip(self, ctx), fields(id = %self.id))]
@@ -358,10 +375,15 @@ impl Actor for Mixer {
     fn stopped(&mut self, _ctx: &mut Self::Context) {
         if let Some(manager) = self.pipeline_manager.take() {
             manager.do_send(StopManagerMessage);
+        }
         for (id, slot) in self.consumer_slots.drain() {
             if let Some(slot) = slot.video_slot {
                 slot.producer.remove_consumer(&id);
+            }
             if let Some(slot) = slot.audio_slot {
+                slot.producer.remove_consumer(&id);
+            }
+        }
         NodeManager::from_registry().do_send(StoppedMessage {
             id: self.id.clone(),
             video_producer: self
@@ -383,20 +405,56 @@ impl Mixer {
                     min: 1,
                     max: 2147483647,
                     current: 1920,
+                },
                 controllable: true,
+            })),
+        );
+        settings.insert(
             "height".to_string(),
+            Arc::new(Mutex::new(Setting {
                 name: "height".to_string(),
+                spec: SettingSpec::I32 {
+                    min: 1,
+                    max: 2147483647,
+                    current: 1080,
+                },
+                controllable: true,
+            })),
+        );
+        settings.insert(
             "sample-rate".to_string(),
+            Arc::new(Mutex::new(Setting {
+                name: "sample-rate".to_string(),
+                spec: SettingSpec::I32 {
+                    min: 1,
+                    max: 2147483647,
                     current: 48000,
+                },
                 controllable: false,
+            })),
+        );
+        settings.insert(
             "fallback-image".to_string(),
+            Arc::new(Mutex::new(Setting {
                 name: "fallback-image".to_string(),
                 spec: SettingSpec::Str { current: "".into() },
+                controllable: false,
+            })),
+        );
+        settings.insert(
             "fallback-timeout".to_string(),
+            Arc::new(Mutex::new(Setting {
                 name: "fallback-timeout".to_string(),
+                spec: SettingSpec::I32 {
                     min: 0,
+                    max: 2147483647,
                     current: 500,
+                },
+                controllable: false,
+            })),
+        );
         settings
+    }
     fn setting(&self, name: &str) -> Option<MutexGuard<Setting>> {
         self.settings
             .get(name)
@@ -408,19 +466,25 @@ impl Mixer {
     fn control_points(&self) -> HashMap<String, Vec<ControlPoint>> {
         if let Some(ref output) = self.video_output {
             let mixing_state = output.mixing_state.lock().unwrap();
-            mixing_state
-                .mixer_controllers
-                .unwrap()
-                .iter()
-                .map(|(id, controller)| (id.clone(), controller.control_points()))
-                .collect()
-            HashMap::new()
+            if let Some(controllers) = &mixing_state.mixer_controllers {
+                return controllers
+                    .iter()
+                    .map(|(id, controller)| (id.clone(), controller.control_points()))
+                    .collect();
+            }
+        }
+        HashMap::new()
+    }
     /// Create a mixer
     pub fn new(
+        id: &str,
         config: Option<HashMap<String, serde_json::Value>>,
         audio: bool,
         video: bool,
     ) -> Result<Self, Error> {
+        if !audio && !video {
+            return Err(anyhow!("Mixer must have at least one of audio or video enabled"));
+        }
         let pipeline = gst::Pipeline::new();
         let audio_output = if audio {
             let output = AudioOutput::new(id);
@@ -434,9 +498,24 @@ impl Mixer {
                 )
                 .unwrap();
             Some(output)
+        } else {
             None
+        };
         let video_output = if video {
             let output = VideoOutput::new(id);
+            pipeline
+                .add(
+                    output
+                        .output
+                        .producer
+                        .appsink()
+                        .upcast_ref::<gst::Element>(),
+                )
+                .unwrap();
+            Some(output)
+        } else {
+            None
+        };
         let mut mixer_settings = Mixer::create_settings();
         if let Some(config) = config {
             for (key, value) in config {
@@ -446,6 +525,9 @@ impl Mixer {
                     SettingController::set_from_value(&mut setting, &value);
                 } else {
                     return Err(anyhow!("No setting with name {} on mixers", key));
+                }
+            }
+        }
         Ok(Self {
             id: id.to_string(),
             pipeline,
@@ -456,6 +538,7 @@ impl Mixer {
             state_machine: StateMachine::default(),
             settings: mixer_settings,
         })
+    }
     fn parse_slot_config_key(property: &str) -> Result<(bool, &str), Error> {
         let split: Vec<&str> = property.splitn(2, "::").collect();
         match split.len() {
@@ -468,12 +551,19 @@ impl Mixer {
             _ => Err(anyhow!(
                 "Slot controller property name must be in form media-type::property-name"
             )),
+        }
+    }
     /// Connect an input slot to `compositor` and `audiomixer`
     #[instrument(level = "debug", name = "connecting", skip(pipeline, slot))]
     fn connect_slot(
+        pipeline: &gst::Pipeline,
         slot: &mut ConsumerSlot,
+        id: &str,
         mixer_id: &str,
+        width: i32,
+        height: i32,
         sample_rate: i32,
+    ) -> Result<(), Error> {
         let volume = slot.volume;
         if let Some(ref mut slot) = slot.video_slot {
             let bin = gst::Bin::new();
@@ -483,14 +573,18 @@ impl Mixer {
             pipeline.add(&bin)?;
             bin.sync_state_with_parent()?;
             let ghost =
-                gst::GhostPad::with_target( &queue.static_pad("src").unwrap()).unwrap();
+                gst::GhostPad::with_target(&queue.static_pad("src").unwrap()).unwrap();
             bin.add_pad(&ghost).unwrap();
             gst::Element::link_many(&[appsrc_elem, &queue])?;
             let srcpad = bin.static_pad("src").unwrap();
             srcpad.link(&slot.pad).unwrap();
             slot.bin = Some(bin);
             slot.producer.add_consumer(&slot.appsrc, id);
+        }
         if let Some(ref mut slot) = slot.audio_slot {
+            let bin = gst::Bin::new();
+            let queue = make_element("queue", None)?;
+            let appsrc_elem: &gst::Element = slot.appsrc.upcast_ref();
             let conv = make_element("audioconvert", None)?;
             let resample = make_element("audioresample", None)?;
             let capsfilter = make_element("capsfilter", None)?;
@@ -501,14 +595,42 @@ impl Mixer {
                     .field("format", &"S16LE")
                     .field("rate", &sample_rate)
                     .build(),
+            )?;
             bin.add_many(&[appsrc_elem, &conv, &resample, &capsfilter, &queue])?;
+            pipeline.add(&bin)?;
+            bin.sync_state_with_parent()?;
             slot.pad.set_property("volume", &volume);
             gst::Element::link_many(&[appsrc_elem, &conv, &resample, &capsfilter, &queue])?;
+            let ghost =
+                gst::GhostPad::with_target(&queue.static_pad("src").unwrap()).unwrap();
+            bin.add_pad(&ghost).unwrap();
+            let srcpad = bin.static_pad("src").unwrap();
+            srcpad.link(&slot.pad).unwrap();
+            slot.bin = Some(bin);
+            slot.producer.add_consumer(&slot.appsrc, id);
+        }
+        Ok(())
+    }
+    #[instrument(
         name = "synchronizing slot controllers",
+        level = "trace",
+        skip(controllers)
+    )]
     fn synchronize_slot_controllers(
+        agg: &gst_base::Aggregator,
+        id: &str,
+        duration: Option<gst::ClockTime>,
         controllers: &mut HashMap<String, PropertyController>,
     ) -> HashMap<String, PropertyController> {
+        let now = get_now();
+        let mut updated_controllers = HashMap::new();
+        for (id, mut controller) in controllers.drain() {
+            if !controller.synchronize(now, duration) {
                 updated_controllers.insert(id, controller);
+            }
+        }
+        updated_controllers
+    }
     /// Start our pipeline when cue_time is reached
     #[instrument(level = "debug", name = "mixing", skip(self, ctx), fields(id = %self.id))]
     fn start_pipeline(&mut self, ctx: &mut Context<Self>) -> Result<StateChangeResult, Error> {
@@ -522,56 +644,96 @@ impl Mixer {
         let timeout = self.setting("fallback-timeout").unwrap().as_i32().unwrap();
         if let Some(ref mut output) = self.video_output {
             output.start(&self.pipeline, width, height, &fallback_image, timeout)?;
+        }
         if let Some(ref mut output) = self.audio_output {
             output.start(&self.pipeline, sample_rate)?;
+        }
         for (id, slot) in self.consumer_slots.iter_mut() {
             Mixer::connect_slot(
                 &self.pipeline,
                 slot,
+                id,
+                &self.id,
                 width,
                 height,
                 sample_rate,
             )?;
+        }
         let addr = ctx.address();
         let id = self.id.clone();
         self.pipeline.call_async(move |pipeline| {
             if let Err(err) = pipeline.set_state(gst::State::Playing) {
                 addr.do_send(ErrorMessage {
                     message: format!("Failed to start mixer {}: {}", id, err),
+                });
+            }
+        });
+        if let Some(ref output) = self.video_output {
             output.output.producer.forward();
+        }
         if let Some(ref output) = self.audio_output {
+            output.output.producer.forward();
+        }
         Ok(StateChangeResult::Success)
+    }
     /// Implement Connect command
     #[instrument(level = "debug", name = "connecting", skip(self, video_producer, audio_producer), fields(id = %self.id))]
     fn connect(
+        &mut self,
         link_id: &str,
         video_producer: Option<StreamProducer>,
         audio_producer: Option<StreamProducer>,
+        config: Option<HashMap<String, serde_json::Value>>,
+    ) -> Result<(), Error> {
         if self.consumer_slots.contains_key(link_id) {
             return Err(anyhow!("mixer {} already has link {}", self.id, link_id));
+        }
         let video_slot = if let Some(producer) = video_producer {
             self.video_output.as_ref().map(|output| InputSlot {
                 producer,
                 appsrc: gst::ElementFactory::make("appsrc")
                     .name(&format!("mixer-slot-video-appsrc-{}", link_id))
                     .build()
+                    .unwrap()
                     .downcast::<gst_app::AppSrc>()
                     .unwrap(),
                 bin: None,
                 pad: output.output.mixer.request_pad_simple("sink_%u").unwrap(),
             })
+        } else {
+            None
+        };
         let audio_slot = if let Some(producer) = audio_producer {
             self.audio_output.as_ref().map(|output| InputSlot {
+                producer,
+                appsrc: gst::ElementFactory::make("appsrc")
                     .name(&format!("mixer-slot-audio-appsrc-{}", link_id))
+                    .build()
+                    .unwrap()
+                    .downcast::<gst_app::AppSrc>()
+                    .unwrap(),
+                bin: None,
+                pad: output.output.mixer.request_pad_simple("sink_%u").unwrap(),
+            })
+        } else {
+            None
+        };
         if audio_slot.is_none() && video_slot.is_none() {
             return Err(anyhow!(
                 "mixer {} link {} must result in at least one audio / video connection",
                 self.id,
                 link_id
             ));
+        }
+        if let Some(config) = config {
+            for (key, value) in config {
                 let (is_video, property) = Mixer::parse_slot_config_key(&key)?;
-                let slot = if is_video { &video_slot } else { &audio_slot };
-                if let Some(slot) = slot {
+                let slot = if is_video {
+                    &video_slot
+                } else {
+                    &audio_slot
+                };
+                if let Some(ref slot) = slot {
                     PropertyController::validate_value(property, slot.pad.upcast_ref(), &value)?;
                     debug!("Setting initial slot config {} {}", property, value);
                     PropertyController::set_property_from_value(
@@ -579,29 +741,41 @@ impl Mixer {
                         property,
                         &value,
                     );
+                }
+            }
+        }
         for slot in [&video_slot, &audio_slot].iter().copied().flatten() {
             gst_utils::StreamProducer::configure_consumer(&slot.appsrc);
+        }
         let mut slot = ConsumerSlot {
             video_slot,
             audio_slot,
             volume: 1.0,
+        };
         if self.state_machine.state == State::Started {
             let width = self.setting("width").unwrap().as_i32().unwrap();
             let height = self.setting("height").unwrap().as_i32().unwrap();
             let sample_rate = self.setting("sample-rate").unwrap().as_i32().unwrap();
             if let Err(err) = Mixer::connect_slot(
+                &self.pipeline,
                 &mut slot,
                 link_id,
+                &self.id,
+                width,
+                height,
+                sample_rate,
             ) {
                 return Err(err);
+            }
+        }
         self.consumer_slots.insert(link_id.to_string(), slot);
+        Ok(())
+    }
     /// Implement Disconnect command
     #[instrument(level = "debug", name = "disconnecting", skip(self), fields(id = %self.id))]
     fn disconnect(&mut self, slot_id: &str) -> Result<(), Error> {
         if let Some(slot) = self.consumer_slots.remove(slot_id) {
-            for slot in [&slot.video_slot, &slot.audio_slot]
-                .copied()
-                .flatten()
+            for slot in [&slot.video_slot, &slot.audio_slot].iter().copied().flatten() {
                 slot.producer.remove_consumer(slot_id);
                 if let Some(ref bin) = slot.bin {
                     let mixer_pad = bin.static_pad("src").unwrap().peer().unwrap();
@@ -614,14 +788,21 @@ impl Mixer {
                     bin.set_state(gst::State::Null).unwrap();
                     self.pipeline.remove(bin).unwrap();
                     mixer.release_request_pad(&mixer_pad);
+                }
+            }
             Ok(())
+        } else {
             Err(anyhow!("mixer {} has no slot with id {}", self.id, slot_id))
+        }
+    }
     /// Implement AddControlPoint command for slots
     #[instrument(level = "debug", name = "controlling-slot", skip(self), fields(id = %self.id))]
     fn add_slot_control_point(
+        &mut self,
         slot_id: &str,
         property: &str,
         point: ControlPoint,
+    ) -> Result<(), Error> {
         if let Some(slot) = self.consumer_slots.get(slot_id) {
             let (is_video, property) = Mixer::parse_slot_config_key(property)?;
             if let Some(slot) = if is_video {
@@ -646,31 +827,52 @@ impl Mixer {
                             .entry(id)
                             .or_insert_with(|| {
                                 PropertyController::new(
-                                    slot_id,
+                                    slot_id.to_string(),
                                     slot.pad.clone().upcast(),
-                                    property,
+                                    property.to_string(),
                                 )
                             })
                             .push_control_point(point);
+                    }
                 } else if let Some(ref output) = self.audio_output {
                     let mut mixing_state = output.mixing_state.lock().unwrap();
                     mixing_state
                         .slot_controllers
                         .as_mut()
+                        .unwrap()
                         .entry(id)
                         .or_insert_with(|| {
-                            PropertyController::new(slot_id, slot.pad.clone().upcast(), property)
+                            PropertyController::new(
+                                slot_id.to_string(),
+                                slot.pad.clone().upcast(),
+                                property.to_string(),
+                            )
                         })
                         .push_control_point(point);
+                }
+                Ok(())
+            } else {
+                Err(anyhow!(
+                    "mixer {} has no slot with id {} with media type {}",
+                    self.id,
+                    slot_id,
+                    if is_video { "video" } else { "audio" }
+                ))
+            }
+        } else {
+            Err(anyhow!("mixer {} has no slot with id {}", self.id, slot_id))
+        }
+    }
     /// Implement RemoveControlPoint command for slots
     #[instrument(level = "debug", name = "removing control point", skip(self), fields(id = %self.id))]
     fn remove_slot_control_point(&mut self, controller_id: &str, slot_id: &str, property: &str) {
-        let (is_video, property) = match split.len() {
-                "video" => (true, split[1]),
-                "audio" => (false, split[1]),
-                _ => {
-                    return;
+        let (is_video, property) = match Mixer::parse_slot_config_key(property) {
+            Ok((is_video, property)) => (is_video, property),
+            Err(_) => {
+                error!("could not parse slot config key {}", property);
                 return;
+            }
+        };
         let id = slot_id.to_owned() + property;
         if is_video {
             if let Some(ref output) = self.video_output {
@@ -679,51 +881,99 @@ impl Mixer {
                     mixing_state.slot_controllers.as_mut().unwrap().get_mut(&id)
                 {
                     controller.remove_control_point(controller_id);
+                }
+            }
         } else if let Some(ref output) = self.audio_output {
             let mut mixing_state = output.mixing_state.lock().unwrap();
             if let Some(controller) = mixing_state.slot_controllers.as_mut().unwrap().get_mut(&id) {
                 controller.remove_control_point(controller_id);
+            }
+        }
+    }
     fn slot_control_points(&self) -> HashMap<String, HashMap<String, Vec<ControlPoint>>> {
         let mut ret = HashMap::new();
+        if let Some(ref output) = self.video_output {
+            let mixing_state = output.mixing_state.lock().unwrap();
             for controller in mixing_state.slot_controllers.as_ref().unwrap().values() {
                 ret.entry(controller.controllee_id.clone())
                     .or_insert_with(HashMap::new)
                     .insert(
                         "video::".to_owned() + &controller.propname,
                         controller.control_points(),
+                    );
+            }
+        }
+        if let Some(ref output) = self.audio_output {
+            let mixing_state = output.mixing_state.lock().unwrap();
+            for controller in mixing_state.slot_controllers.as_ref().unwrap().values() {
+                ret.entry(controller.controllee_id.clone())
+                    .or_insert_with(HashMap::new)
+                    .insert(
                         "audio::".to_owned() + &controller.propname,
+                        controller.control_points(),
+                    );
+            }
+        }
         ret
+    }
     fn slot_settings(&self) -> HashMap<String, HashMap<String, serde_json::Value>> {
+        let mut ret = HashMap::new();
         for (id, slot) in &self.consumer_slots {
             let mut properties: HashMap<String, serde_json::Value> = HashMap::new();
             if let Some(ref slot) = slot.video_slot {
                 properties.extend(PropertyController::properties(
+                    &slot.pad,
                     "video::",
                 ));
+            }
             if let Some(ref slot) = slot.audio_slot {
+                properties.extend(PropertyController::properties(
+                    &slot.pad,
                     "audio::",
+                ));
+            }
             ret.insert(id.clone(), properties);
+        }
+        ret
+    }
     /// Implement AddControlPoint command for the mixer
     #[instrument(level = "debug", name = "controlling", skip(self), fields(id = %self.id))]
     fn add_control_point(&mut self, property: String, point: ControlPoint) -> Result<(), Error> {
         if let Some(setting) = self.settings.get(&property) {
-                SettingController::validate_control_point(&setting.lock().unwrap(), &point)?;
+            SettingController::validate_control_point(&setting.lock().unwrap(), &point)?;
+            if let Some(ref mut output) = self.video_output {
+                let mut mixing_state = output.mixing_state.lock().unwrap();
                 mixing_state
                     .mixer_controllers
                     .as_mut()
+                    .unwrap()
                     .entry(property)
-                    .or_insert_with(|| SettingController::new(&self.id, setting.clone()))
+                    .or_insert_with(|| SettingController::new(self.id.clone(), setting.clone()))
                     .push_control_point(point);
+            }
+            Ok(())
+        } else {
             Err(anyhow!(
                 "mixer {} has no setting with name {}",
+                self.id,
                 property
             ))
+        }
+    }
     /// Implement RemoveControlPoint command for the mixer
     fn remove_control_point(&mut self, controller_id: &str, property: &str) {
+        if let Some(ref mut output) = self.video_output {
+            let mut mixing_state = output.mixing_state.lock().unwrap();
             if let Some(controller) = mixing_state
-                .slot_controllers
+                .mixer_controllers
                 .as_mut()
+                .unwrap()
                 .get_mut(property)
+            {
+                controller.remove_control_point(controller_id);
+            }
+        }
+    }
     #[instrument(level = "debug", skip(self, ctx), fields(id = %self.id))]
     fn stop(&mut self, ctx: &mut Context<Self>) {
         self.stop_schedule(ctx);
@@ -736,6 +986,7 @@ impl Schedulable<Self> for Mixer {
     fn node_id(&self) -> &str {
         &self.id
     fn transition(
+        &mut self,
         ctx: &mut Context<Self>,
         target: State,
     ) -> Result<StateChangeResult, Error> {
@@ -747,6 +998,10 @@ impl Schedulable<Self> for Mixer {
             State::Stopped => {
                 self.stop(ctx);
                 Ok(StateChangeResult::Success)
+            }
+        }
+    }
+}
 impl Handler<ConsumerMessage> for Mixer {
     type Result = MessageResult<ConsumerMessage>;
     fn handle(&mut self, msg: ConsumerMessage, _ctx: &mut Context<Self>) -> Self::Result {
@@ -764,9 +1019,15 @@ impl Handler<ConsumerMessage> for Mixer {
             } => MessageResult(self.add_slot_control_point(&slot_id, &property, control_point)),
             ConsumerMessage::RemoveControlPoint {
                 controller_id,
+                slot_id,
+                property,
             } => {
                 self.remove_slot_control_point(&controller_id, &slot_id, &property);
                 MessageResult(Ok(()))
+            }
+        }
+    }
+}
 impl Handler<StartMessage> for Mixer {
     type Result = MessageResult<StartMessage>;
     fn handle(&mut self, msg: StartMessage, ctx: &mut Context<Self>) -> Self::Result {
@@ -774,32 +1035,50 @@ impl Handler<StartMessage> for Mixer {
 impl Handler<ErrorMessage> for Mixer {
     type Result = ();
     fn handle(&mut self, msg: ErrorMessage, ctx: &mut Context<Self>) -> Self::Result {
-        error!("Got error message '{}' on destination {}", msg.message, self.id,);
+        error!(
+            "Got error message '{}' on destination {}",
+            msg.message, self.id,
+        );
         NodeManager::from_registry().do_send(NodeStatusMessage::Error {
+            id: self.id.clone(),
             message: msg.message,
+        });
         gst::debug_bin_to_dot_file_with_ts(
             &self.pipeline,
             gst::DebugGraphDetails::all(),
-            format!("error-mixer-{}", self.id),
+            &format!("error-mixer-{}", self.id),
+        );
+        self.stop(ctx);
+    }
 impl Handler<GetProducerMessage> for Mixer {
     type Result = MessageResult<GetProducerMessage>;
     fn handle(&mut self, _msg: GetProducerMessage, _ctx: &mut Context<Self>) -> Self::Result {
         MessageResult(Ok((
             self.video_output
+                .as_ref()
+                .map(|o| o.output.producer.clone()),
             self.audio_output
+                .as_ref()
+                .map(|o| o.output.producer.clone()),
         )))
+    }
 impl Handler<ScheduleMessage> for Mixer {
     type Result = Result<(), Error>;
     fn handle(&mut self, msg: ScheduleMessage, ctx: &mut Context<Self>) -> Self::Result {
         self.reschedule(ctx, msg.cue_time, msg.end_time)
 impl Handler<StopMessage> for Mixer {
+    type Result = Result<(), Error>;
     fn handle(&mut self, _msg: StopMessage, ctx: &mut Context<Self>) -> Self::Result {
+        self.stop(ctx);
+        Ok(())
+    }
 impl Handler<GetNodeInfoMessage> for Mixer {
     type Result = Result<NodeInfo, Error>;
     fn handle(&mut self, _msg: GetNodeInfoMessage, _ctx: &mut Context<Self>) -> Self::Result {
         Ok(NodeInfo::Mixer(MixerInfo {
             slots: self
                 .consumer_slots
+                .iter()
                 .map(|(id, slot)| {
                     (
                         id.clone(),
@@ -810,8 +1089,13 @@ impl Handler<GetNodeInfoMessage> for Mixer {
                 })
                 .collect(),
             video_consumer_slot_ids: self
+                .video_output
+                .as_ref()
                 .map(|o| o.output.producer.get_consumer_ids()),
             audio_consumer_slot_ids: self
+                .audio_output
+                .as_ref()
+                .map(|o| o.output.producer.get_consumer_ids()),
             cue_time: self.state_machine.cue_time,
             end_time: self.state_machine.end_time,
             state: self.state_machine.state,
@@ -820,9 +1104,16 @@ impl Handler<GetNodeInfoMessage> for Mixer {
             slot_settings: self.slot_settings(),
             slot_control_points: self.slot_control_points(),
         }))
+    }
 impl Handler<AddControlPointMessage> for Mixer {
+    type Result = Result<(), Error>;
     fn handle(&mut self, msg: AddControlPointMessage, _ctx: &mut Context<Self>) -> Self::Result {
         self.add_control_point(msg.property, msg.control_point)
+    }
+}
 impl Handler<RemoveControlPointMessage> for Mixer {
+    type Result = ();
     fn handle(&mut self, msg: RemoveControlPointMessage, _ctx: &mut Context<Self>) -> Self::Result {
-        self.remove_control_point(&msg.controller_id, &msg.property)
+        self.remove_control_point(&msg.controller_id, &msg.property);
+    }
+}

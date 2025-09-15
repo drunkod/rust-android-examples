@@ -106,7 +106,7 @@ impl PropertyController {
             if do_trace {
                 let new = self.obj.property_value(self.propname.as_str());
 
-                trace!(obj = %self.obj.name(), property = %self.propname, "Synchronized controller: {:?} -> {:?}", initial, new);
+                trace!(obj = %%self.obj.name(), property = %self.propname, "Synchronized controller: {:?} -> {:?}", initial, new);
             }
         }
 
