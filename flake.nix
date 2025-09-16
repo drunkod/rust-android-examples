@@ -46,6 +46,11 @@
           ${androidModule.shellHook}
           ${gstreamerModule.shellHook}
           ${devToolsModule.shellHook}
+
+          # Load aliases if file exists
+          if [ -f .shell_aliases ]; then
+            source .shell_aliases
+          fi
           
           # Setup library paths
           export LD_LIBRARY_PATH="${pkgs.lib.makeLibraryPath allPackages}:$LD_LIBRARY_PATH"

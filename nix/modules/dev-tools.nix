@@ -2,6 +2,7 @@
 
 let
   vscodeWrapper = import ./vscode-wrapper.nix { inherit pkgs; };
+  helpCommand = import ./help-command.nix { inherit pkgs; };
 in
 {
   packages = with pkgs; [
@@ -17,6 +18,7 @@ in
     # Version control and IDE
     git
     vscodeWrapper.package  # Use wrapper instead of plain vscode
+    helpCommand.package    # Add help command
 
     # Nix tools for VS Code extensions
     nix
@@ -50,5 +52,11 @@ in
 
     # Ensure Nix tools are available for VS Code
     export PATH="${pkgs.nix}/bin:$PATH"
+
+    # Show quick help on first entry
+    if [ -z "$_DEV_HELP_SHOWN" ]; then
+      export _DEV_HELP_SHOWN=1
+      echo "💡 Type 'dev-help' for command reference"
+    fi
   '';
 }

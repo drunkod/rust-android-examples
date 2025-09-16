@@ -1,0 +1,22 @@
+# Rust shortcuts
+alias cb='cargo build'
+alias cr='cargo run'
+alias ct='cargo test'
+alias cw='cargo watch'
+alias cwr='cargo watch -x run'
+alias cwt='cargo watch -x test'
+
+# Android shortcuts
+alias devices='adb devices'
+alias logcat='adb logcat'
+alias mirror='scrcpy -Sw -K'
+
+# Git shortcuts
+alias gs='git status'
+alias ga='git add'
+alias gc='git commit'
+alias gp='git push'
+
+# Quick actions
+alias code='code-dev'
+alias help='dev-help'
