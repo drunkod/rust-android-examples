@@ -1,5 +1,8 @@
 { pkgs }:
 
+let
+  vscodeWrapper = import ./vscode-wrapper.nix { inherit pkgs; };
+in
 {
   packages = with pkgs; [
     # Shell and completions
@@ -13,7 +16,12 @@
 
     # Version control and IDE
     git
-    vscode
+    vscodeWrapper.package  # Use wrapper instead of plain vscode
+
+    # Nix tools for VS Code extensions
+    nix
+    nil  # Nix language server
+    nixpkgs-fmt  # Nix formatter
 
     # Language support
     python3
@@ -39,5 +47,8 @@
     fi
 
     export PKG_CONFIG_PATH="${pkgs.glib.dev}/lib/pkgconfig:${pkgs.openssl.dev}/lib/pkgconfig:$PKG_CONFIG_PATH"
+
+    # Ensure Nix tools are available for VS Code
+    export PATH="${pkgs.nix}/bin:$PATH"
   '';
 }
