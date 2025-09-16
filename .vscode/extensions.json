@@ -1,0 +1,13 @@
+{
+  "recommendations": [
+    "jnoortheen.nix-ide",
+    "rust-lang.rust-analyzer",
+    "vadimcn.vscode-lldb",
+    "serayuzgur.crates",
+    "tamasfe.even-better-toml"
+  ],
+  "unwantedRecommendations": [
+    "ms-vsliveshare.vsliveshare",
+    "ms-python.gather"
+  ]
+}
