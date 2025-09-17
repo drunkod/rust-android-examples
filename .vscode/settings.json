@@ -26,5 +26,11 @@
   },
   "extensions.ignoreRecommendations": false,
   "python.defaultInterpreterPath": "${workspaceFolder}/.venv/bin/python",
-  "rust-analyzer.server.path": "rust-analyzer"
+  "rust-analyzer.server.path": "rust-analyzer",
+  
+    "http.proxy": "socks5://10.96.194.22:7891",
+    "http.proxyStrictSSL": false,
+    "http.proxyAuthorization": null,
+    "http.proxySupport": "on",  // or "off", "fallback", "override"
+    "http.systemCertificates": false  
 }
