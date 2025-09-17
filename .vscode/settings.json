@@ -28,16 +28,27 @@
   "python.defaultInterpreterPath": "${workspaceFolder}/.venv/bin/python",
   "rust-analyzer.server.path": "rust-analyzer",
   
-    "http.proxy": "socks5://10.96.194.22:7891",
-    "http.proxyStrictSSL": false,
-    "http.proxyAuthorization": null, // or "off", "fallback", "override"
-    "http.systemCertificates": false, 
-    "terminal.integrated.env.linux": {
-        "http_proxy": "http://10.96.194.22:7890",
-        "https_proxy": "http://10.96.194.22:7890",
-        "all_proxy": "socks5://10.96.194.22:7891"
-    },
-    "http.useLocalProxyConfiguration": false
+  // Route ALL VS Code traffic via the SOCKS proxy, including DNS.
+  "http.proxy": "http://10.96.194.22:7890",
+
+  // Force extensions and all network stacks to use the proxy.
+  "http.proxySupport": "override",
+
+  // If your proxy MITMs TLS, keep this false; otherwise set to true.
+  "http.proxyStrictSSL": false,
+  "http.systemCertificates": false,
+
+  // We’re explicitly setting the proxy above; don’t try OS proxy.
+  "http.useLocalProxyConfiguration": false,
+
+  // Terminal env only affects the integrated terminal, not VS Code itself,
+  // but keeping them doesn’t hurt.
+  "terminal.integrated.env.linux": {
+    "http_proxy": "http://10.96.194.22:7890",
+    "https_proxy": "http://10.96.194.22:7890",
+    "all_proxy": "socks5://10.96.194.22:7891",
+    "no_proxy": "localhost,127.0.0.1,::1,.local"
+  }
     
     
 }
