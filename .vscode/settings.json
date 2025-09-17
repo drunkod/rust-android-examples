@@ -30,7 +30,14 @@
   
     "http.proxy": "socks5://10.96.194.22:7891",
     "http.proxyStrictSSL": false,
-    "http.proxyAuthorization": null,
-    "http.proxySupport": "on",  // or "off", "fallback", "override"
-    "http.systemCertificates": false  
+    "http.proxyAuthorization": null, // or "off", "fallback", "override"
+    "http.systemCertificates": false, 
+    "terminal.integrated.env.linux": {
+        "http_proxy": "http://10.96.194.22:7890",
+        "https_proxy": "http://10.96.194.22:7890",
+        "all_proxy": "socks5://10.96.194.22:7891"
+    },
+    "http.useLocalProxyConfiguration": false
+    
+    
 }
