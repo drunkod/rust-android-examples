@@ -43,12 +43,12 @@
 
   // Terminal env only affects the integrated terminal, not VS Code itself,
   // but keeping them doesn’t hurt.
-  "terminal.integrated.env.linux": {
-    "http_proxy": "http://10.96.194.22:7890",
-    "https_proxy": "http://10.96.194.22:7890",
-    "all_proxy": "socks5://10.96.194.22:7891",
-    "no_proxy": "localhost,127.0.0.1,::1,.local"
-  }
+  // "terminal.integrated.env.linux": {
+  //   "http_proxy": "http://10.96.194.22:7890",
+  //   "https_proxy": "http://10.96.194.22:7890",
+  //   "all_proxy": "socks5://10.96.194.22:7891",
+  //   "no_proxy": "localhost,127.0.0.1,::1,.local"
+  // }
     
     
 }
