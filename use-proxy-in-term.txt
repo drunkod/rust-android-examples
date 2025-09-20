@@ -1,0 +1,5 @@
+export http_proxy="http://10.188.67.126:7890"
+export https_proxy="http://10.188.67.126:7890"
+export no_proxy="localhost,127.0.0.1,.example.local"
+
+unset http_proxy https_proxy no_proxy
