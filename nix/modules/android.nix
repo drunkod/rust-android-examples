@@ -4,7 +4,7 @@ let
   androidComposition = pkgs.androidenv.composeAndroidPackages {
     toolsVersion = "26.1.1";
     platformToolsVersion = "36.0.1";
-    buildToolsVersions = [ "34.0.0" "33.0.2" ];
+    buildToolsVersions = [ "34.0.0" "33.0.2" "30.0.3" ];
     includeEmulator = true;
     emulatorVersion = "36.2.4";
     platformVersions = [ "29" "30" "31" "32" "33" "34" "35" ];
