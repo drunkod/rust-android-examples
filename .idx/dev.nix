@@ -6,64 +6,72 @@
 
   # Use https://search.nixos.org/packages to find packages
   packages = [
+    # === Rust Toolchain ===
     pkgs.rustup
-  # Use https://search.nixos.org/packages to find packages
+    pkgs.cargo-watch
+    pkgs.cargo-edit
+    pkgs.cargo-outdated
+
+    # === Core Build Tools ===
     pkgs.gcc
+    pkgs.pkg-config
+    pkgs.gnumake # <-- The fix for the libffi error
+
+    # === System Libraries ===
     pkgs.glib
     pkgs.glib.dev
-    pkgs.pkg-config
     pkgs.openssl
+    pkgs.openssl.dev
+
+    # === GStreamer & Plugins ===
     pkgs.gst_all_1.gstreamer
+    pkgs.gst_all_1.gstreamer.dev
     pkgs.gst_all_1.gst-plugins-base
+    pkgs.gst_all_1.gst-plugins-base.dev
     pkgs.gst_all_1.gst-plugins-good
     pkgs.gst_all_1.gst-plugins-bad
+    pkgs.gst_all_1.gst-plugins-ugly
     pkgs.gst_all_1.gst-libav
     pkgs.gst_all_1.gst-devtools
     pkgs.gst_all_1.gst-editing-services
-    #pkgs.android-sdk
-    #pkgs.android-ndk
-    # pkgs.python311Packages.pip5
-    # pkgs.nodejs_20
-    # pkgs.nodePackages.nodemon
+
+    # === Additional Multimedia Libraries ===
+    pkgs.libva
+    pkgs.libvpx
+    pkgs.x264
+    pkgs.x265
+
+    # === GUI Dependencies (for eframe) ===
+    pkgs.libxkbcommon
+    pkgs.libGL
+    pkgs.wayland
+    pkgs.xorg.libXcursor
+    pkgs.xorg.libXrandr
+    pkgs.xorg.libXi
+    pkgs.xorg.libX11
   ];
 
   # Sets environment variables in the workspace
-  env = {};
-  idx = {
-    # Search for the extensions you want on https://open-vsx.org/ and use "publisher.id"
-    extensions = [
-      # "vscodevim.vim"
+  env = {
+    PKG_CONFIG_PATH = pkgs.lib.makeSearchPath "lib/pkgconfig" [
+      pkgs.gst_all_1.gstreamer.dev
+      pkgs.gst_all_1.gst-plugins-base.dev
+      pkgs.glib.dev
+      pkgs.openssl.dev
     ];
 
-    # Enable previews
-    previews = {
-      enable = true;
-      previews = {
-        # web = {
-        #   # Example: run "npm run dev" with PORT set to IDX's defined port for previews,
-        #   # and show it in IDX's web preview panel
-        #   command = ["npm" "run" "dev"];
-        #   manager = "web";
-        #   env = {
-        #     # Environment variables to set for your server
-        #     PORT = "$PORT";
-        #   };
-        # };
-      };
-    };
-
+    GST_PLUGIN_SYSTEM_PATH_1_0 = pkgs.lib.makeSearchPath "lib/gstreamer-1.0" (with pkgs.gst_all_1; [
+      gstreamer
+      gst-plugins-base
+      gst-plugins-good
+      gst-plugins-bad
+      gst-plugins-ugly
+      gst-libav
+    ]);
+  };
+  
+  idx = {
     # Workspace lifecycle hooks
-    workspace = {
-      # Runs when a workspace is first created
-      onCreate = {
-        # Example: install JS dependencies from NPM
-        # npm-install = "npm install";
-      };
-      # Runs when the workspace is (re)started
-      onStart = {
-        # Example: start a background task to watch and re-build backend code
-        # watch-backend = "npm run watch-backend";
-      };
-    };
+    workspace = {};
   };
 }
