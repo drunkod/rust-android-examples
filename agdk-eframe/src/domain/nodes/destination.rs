@@ -122,7 +122,8 @@ impl Destination {
         for appsrc in [&video_appsrc, &audio_appsrc].iter().copied().flatten() {
             gst_utils::StreamProducer::configure_consumer(appsrc);
         }
-        let pipeline = gst::Pipeline::new(Some(&format!("destination-pipeline-{}", id)));
+        let pipeline = gst::Pipeline::new();
+        pipeline.set_name(&format!("destination-pipeline-{}", id));
         Self {
             id: id.to_string(),
             family: family.clone(),
@@ -183,16 +184,16 @@ impl Destination {
         self.pipeline.add_many(&[&mux, &mux_queue, &sink])?;
         sink.set_property("location", uri);
         // Add off tls-validation rtmps:// for telegram
-        sink.set_property("tls-validation-flags", &TlsCertificateFlags::NOT_ACTIVATED);
+        sink.set_property("tls-validation-flags", TlsCertificateFlags::NOT_ACTIVATED);
 
         // Add debug println here
         println!("RTMP connection established to uri: {}", uri);
-        mux.set_property("streamable", &true)?;
-        mux.set_property("latency", &1000000000u64)?;
+        mux.set_property("streamable", true);
+        mux.set_property("latency", 1000000000u64);
         mux.set_property(
             "start-time-selection",
             gst_base::AggregatorStartTimeSelection::First,
-        )?;
+        );
         gst::Element::link_many(&[&mux, &mux_queue, &sink])?;
         if let Some(appsrc) = &self.video_appsrc {
             let vconv = make_element("videoconvert", None)?;
@@ -213,14 +214,14 @@ impl Destination {
             if venc.has_property("tune", None) {
                 venc.set_property_from_str("tune", "zerolatency");
             } else if venc.has_property("zerolatency", None) {
-                venc.set_property("zerolatency", &true)?;
+                venc.set_property("zerolatency", true);
             }
             if venc.has_property("key-int-max", None) {
-                venc.set_property("key-int-max", &30u32)?;
+                venc.set_property("key-int-max", 30u32);
             } else if venc.has_property("gop-size", None) {
-                venc.set_property("gop-size", &30i32)?;
+                venc.set_property("gop-size", 30i32);
             }
-            vparse.set_property("config-interval", &-1i32)?;
+            vparse.set_property("config-interval", -1i32);
             timecodestamper.set_property_from_str("source", "rtc");
             timeoverlay.set_property_from_str("time-mode", "time-code");
             venc_queue.set_properties(&[
@@ -305,9 +306,9 @@ impl Destination {
         let mux = make_element("mpegtsmux", None)?;
         let sink = make_element("udpsink", None)?;
         sink.set_property("host", host);
-        sink.set_property("port", &(5005i32));
+        sink.set_property("port", 5005i32);
         println!("UDP connection established to host: {}", host);
-        mux.set_property("alignment", &(7i32))?;
+        mux.set_property("alignment", 7i32);
         self.pipeline.add_many(&[&mux, &sink])?;
         if let Some(appsrc) = &self.video_appsrc {
             let vconv = make_element("videoconvert", None)?;
@@ -380,16 +381,16 @@ impl Destination {
             sink.set_property(
                 "max-size-time",
                 (max_size_time as u64) * gst::ClockTime::MSECOND,
-            )?;
-            sink.set_property("use-robust-muxing", &true)?;
+            );
+            sink.set_property("use-robust-muxing", true);
             let mux = make_element("qtmux", None)?;
-            mux.set_property("reserved-moov-update-period", &gst::ClockTime::SECOND)?;
-            sink.set_property("muxer", &mux)?;
+            mux.set_property("reserved-moov-update-period", gst::ClockTime::SECOND);
+            sink.set_property("muxer", &mux);
             let location = base_name.to_owned() + "%05d.mp4";
-            sink.set_property("location", &location)?;
+            sink.set_property("location", &location);
         } else {
             let location = base_name.to_owned() + ".mp4";
-            sink.set_property("location", &location)?;
+            sink.set_property("location", &location);
         }
         if let Some(appsrc) = &self.video_appsrc {
             let vconv = make_element("videoconvert", None)?;

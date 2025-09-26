@@ -809,7 +809,7 @@ impl Handler<RegisterListenerMessage> for NodeManager {
 
     #[instrument(level = "debug", name = "registering listener", skip(self, _ctx))]
     fn handle(&mut self, msg: RegisterListenerMessage, _ctx: &mut Context<Self>) -> Self::Result {
-        self.add_listener(msg.id, msg.recipient)
+        self.add_listener(msg.id, msg.recipient.into())
     }
 }
 

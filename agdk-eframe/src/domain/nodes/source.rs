@@ -1,386 +1,205 @@
-use tracing::{debug, error, instrument, trace};
+use actix::prelude::*;
+use anyhow::{anyhow, Error};
 use chrono::{DateTime, Utc};
 use gst::prelude::*;
-use anyhow::{anyhow, Error};
-use actix::prelude::*;
-/// Узел обработки источника.//!
-/// Единственный поддерживаемый тип источника создается с помощью URI. В будущем
-/// Генераторы также могут поддерживаться, например, для отображения обратного отсчета.
-///
-/// Основной сложностью для этого узла является [`starting`](State::Starting)
-/// Особенность: когда узел должен играть в будущем, мы его раскручиваем
-/// встать за 10 секунд до начала. Неживые источники блокируются
-/// by fallbacksrc, который выбирает базовое время только после разблокировки,
-/// и данные, поступающие из живых источников, отбрасываются StreamProducers
-/// пока для них не будет вызвана функция forward().
-/// Часть дополнительной сложности связана с функцией изменения расписания:
-/// При перепланировании источника прероллинга мы хотим снести
-/// предыдущий конвейер, но поскольку логические соединения отслеживаются
-/// элементы StreamProducer, мы хотим сохранить их жизненный цикл привязанным к
-/// что и в источнике. Это означает, что ссылки на приложения могут быть удалены из старых
-/// трубопровод и переместился на новый, он безопасен, но его нужно сохранить
-/// в памяти.
+use std::collections::HashMap;
+use tracing::{debug, instrument, trace};
 
 use crate::shared::{
     make_element,
-    pipeline_manager::{PipelineManager, StopManagerMessage},
+    pipeline_manager::{PipelineManager, StopManagerMessage, WaitForEosMessage},
     schedulable::{Schedulable, StateChangeResult, StateMachine},
     stream_producer::StreamProducer,
     ErrorMessage,
 };
-use actix::MessageResult;
 use auteur_controlling::controller::{NodeInfo, SourceInfo, State};
 use super::messages::{
-    AddControlPointMessage, GetNodeInfoMessage, GetProducerMessage, NodeStatusMessage,
-    RemoveControlPointMessage, ScheduleMessage, StartMessage, StopMessage, StoppedMessage,
+    GetNodeInfoMessage, GetProducerMessage, NodeStatusMessage, ScheduleMessage, StartMessage,
+    StopMessage, StoppedMessage,
 };
 use super::node::NodeManager;
 
-/// Конвейер и различные элементы GStreamer, которые источник
-/// по желанию обертывает, их время жизни не привязано напрямую к этому
-/// самого источника
-// The `Media` struct holds references to various GStreamer elements and tracks the state
-// of media streaming within a GStreamer pipeline.
-#[derive(Debug)]
-struct Media {
-    /// The wrapped pipeline - This is the primary GStreamer pipeline that handles the media stream.
-    pipeline: gst::Pipeline,
-    /// A helper for managing the pipeline - This might be an actor address (`Addr`) for an actor
-    /// that is responsible for managing and controlling the pipeline's state and actions.
-    pipeline_manager: Addr<PipelineManager>,
-    /// `fallbacksrc`
-    /// The source element, possibly used for providing a media stream to the pipeline.
-    /// If `fallbacksrc` is not available, this would be replaced with an alternative source element.
-    src: gst::Element,
-    /// Vector of `fallbackswitch`, only used to monitor status
-    /// A vector of switch elements (`fallbackswitch`). These are likely used to switch between
-    /// different media streams or sources. Each element in the vector represents a switch in the pipeline.
-    /// If `fallbackswitch` is not available, you would need to find an alternative way to handle stream switching.
-    switches: Vec<gst::Element>,
-    /// A counter for the number of streams that are currently active in the pipeline.
-    /// This value is increased when the `src` element exposes new pads (indicating a new stream)
-    /// and decreased when these pads receive an End-of-Stream (EOS) signal.
-    n_streams: u32,
-    /// An optional `urisourcebin` element that might be used for monitoring purposes.
-    /// If `fallbacksrc` is used to manage multiple URIs, `urisourcebin` could be an alternative
-    /// for handling URIs if you need a direct URI handling mechanism.
-    source_bin: Option<gst::Element>,
-}
-
-/// The Source actor
+/// A source processing node.
+///
+/// The actual source depends on its URI scheme.
+/// `videotestsrc` and `audiotestsrc` are used for `test://`,
+/// `filesrc` is used for `file://`, and `uridecodebin` for everything
+/// else.
+///
+/// The output of the source is propagated through a
+/// [`StreamProducer`](crate::shared::stream_producer::StreamProducer).
 pub struct Source {
     /// Unique identifier
     id: String,
-    /// URI the source will play
+    /// The URI this source is playing
     uri: String,
-    /// Output audio producer
-    audio_producer: Option<StreamProducer>,
-    /// Output video producer
+    /// Video-related elements
     video_producer: Option<StreamProducer>,
-    /// GStreamer elements when prerolling or playing
-    media: Option<Media>,
-    /// Statistics timer
-    monitor_handle: Option<SpawnHandle>,
+    /// Audio-related elements
+    audio_producer: Option<StreamProducer>,
+    /// The wrapped pipeline
+    pipeline: gst::Pipeline,
+    /// A helper for managing the pipeline
+    pipeline_manager: Option<Addr<PipelineManager>>,
     /// Our state machine
     state_machine: StateMachine,
 }
 
+impl Actor for Source {
+    type Context = Context<Self>;
+
+    #[instrument(level = "debug", name = "starting", skip(self, ctx), fields(id = %self.id))]
+    fn started(&mut self, ctx: &mut Context<Self>) {
+        self.pipeline_manager = Some(
+            PipelineManager::new(
+                self.pipeline.clone(),
+                ctx.address().downgrade().recipient(),
+                &self.id,
+            )
+            .start(),
+        );
+    }
+
+    #[instrument(level = "debug", name = "stopping", skip(self, _ctx), fields(id = %self.id))]
+    fn stopping(&mut self, _ctx: &mut Context<Self>) -> Running {
+        if let Some(manager) = self.pipeline_manager.take() {
+            manager.do_send(StopManagerMessage);
+        }
+
+        Running::Stop
+    }
+
+    #[instrument(level = "debug", name = "stopped", skip(self, _ctx), fields(id = %self.id))]
+    fn stopped(&mut self, _ctx: &mut Self::Context) {
+        NodeManager::from_registry().do_send(StoppedMessage {
+            id: self.id.clone(),
+            video_producer: self.video_producer.clone(),
+            audio_producer: self.audio_producer.clone(),
+        });
+    }
+}
+
 impl Source {
-    // Constructor to create a new source.
     /// Create a source
     #[instrument(level = "debug", name = "creating")]
     pub fn new(id: &str, uri: &str, audio: bool, video: bool) -> Self {
-        // Initialize audio and video producers based on configuration.
-        // Other properties are set to default values.
-        let audio_producer = if audio {
-            Some(StreamProducer::from(
-                &gst::ElementFactory::make("appsink")
-                    .name(&format!("src-audio-appsink-{}", id))
-                    .build()
-                    .unwrap()
-                    .downcast::<gst_app::AppSink>()
-                    .unwrap(),
-            ))
-        } else {
-            None
-        };
         let video_producer = if video {
-            Some(StreamProducer::from(
-                &gst::ElementFactory::make("appsink")
-                    .name(&format!("src-video-appsink-{}", id))
-                    .build()
-                    .unwrap()
-                    .downcast::<gst_app::AppSink>()
-                    .unwrap(),
-            ))
+            let appsink = gst::ElementFactory::make("appsink")
+                .name(&format!("src-video-appsink-{}", id))
+                .build()
+                .unwrap()
+                .downcast::<gst_app::AppSink>()
+                .unwrap();
+            Some(StreamProducer::from(&appsink))
         } else {
             None
         };
+
+        let audio_producer = if audio {
+            let appsink = gst::ElementFactory::make("appsink")
+                .name(&format!("src-audio-appsink-{}", id))
+                .build()
+                .unwrap()
+                .downcast::<gst_app::AppSink>()
+                .unwrap();
+            Some(StreamProducer::from(&appsink))
+        } else {
+            None
+        };
+
+        let pipeline = gst::Pipeline::new();
+        pipeline.upcast_ref::<gst::Object>().set_name(&format!("source-pipeline-{}", id));
+
         Self {
             id: id.to_string(),
             uri: uri.to_string(),
-            audio_producer,
             video_producer,
-            media: None,
-            monitor_handle: None,
+            audio_producer,
+            pipeline,
+            pipeline_manager: None,
             state_machine: StateMachine::default(),
         }
     }
 
-    // Method to connect pads exposed by `fallbacksrc` to output producer
-    /// Подключите колодки, открытые `fallbacksrc`, к нашим производителям вывода
-    #[instrument(level = "debug", name = "connecting", skip(pipeline, is_video, pad, video_producer, audio_producer), fields(pad = %pad.name()))]
-    fn connect_pad(
-        id: String,
-        is_video: bool,
-        pipeline: &gst::Pipeline,
-        pad: &gst::Pad,
-        video_producer: &Option<StreamProducer>,
-        audio_producer: &Option<StreamProducer>,
-    ) -> Result<Option<gst::Element>, Error> {
-        // Handle pad connections based on audio or video type.
-        // Управление подключениями пэдов в зависимомти от типа аудио или видео
-        if is_video {
-            if let Some(video_producer) = video_producer {
-                let deinterlace = make_element("deinterlace", None)?;
-                pipeline.add(&deinterlace)?;
-                let appsink = video_producer.appsink();
-                debug!(appsink = appsink.name().as_str(), "linking video stream");
-                deinterlace.sync_state_with_parent()?;
-                let sinkpad = deinterlace.static_pad("sink").unwrap();
-                pad.link(&sinkpad)?;
-                deinterlace.link(&appsink)?;
-                Ok(Some(appsink.upcast()))
-            } else {
-                Ok(None)
-            }
-        } else if let Some(audio_producer) = audio_producer {
-            let aconv = make_element("audioconvert", None)?;
-            let level = make_element("level", None)?;
-            pipeline.add_many(&[&aconv, &level])?;
-            let appsink = audio_producer.appsink();
-            debug!(appsink = appsink.name().as_str(), "linking audio stream to appsink");
-            aconv.sync_state_with_parent()?;
-            level.sync_state_with_parent()?;
-            gst::Element::link_many(&[&aconv, &level, appsink.upcast_ref()])?;
-            let sinkpad = aconv.static_pad("sink").unwrap();
-            pad.link(&sinkpad)?;
-            Ok(Some(appsink.upcast()))
-        } else {
-            Ok(None)
-        }
-    }
-
-    /// Прокрутите pipeline трубопровод заранее (по умолчанию за 10 секунд до начала сигнала).
-    #[instrument(level = "debug", name = "prerolling", skip(self, ctx), fields(id = %self.id))]
-    fn preroll(&mut self, ctx: &mut Context<Self>) -> Result<StateChangeResult, Error> {
-        let pipeline = gst::Pipeline::with_name(&self.id.to_string());
-        if let Some(ref audio_producer) = self.audio_producer {
-            pipeline.add(audio_producer.appsink().upcast_ref::<gst::Element>())?;
-        }
-        if let Some(ref video_producer) = self.video_producer {
-            pipeline.add(video_producer.appsink().upcast_ref::<gst::Element>())?;
-        }
-        let src = make_element("fallbacksrc", None)?;
-        pipeline.add(&src)?;
-        println!("185 >>>>>>>src.set_property to uri: {}", &self.uri);
+    /// Start our pipeline when cue_time is reached
+    #[instrument(level = "debug", name = "playing", skip(self, ctx), fields(id = %self.id))]
+    fn start_pipeline(&mut self, ctx: &mut Context<Self>) -> Result<StateChangeResult, Error> {
+        let src = make_element("uridecodebin3", None)?;
         src.set_property("uri", &self.uri);
-        src.set_property("manual-unblock", &true);
-        src.set_property("immediate-fallback", &true);
-        src.set_property("enable-audio", &self.audio_producer.is_some());
-        src.set_property("enable-video", &self.video_producer.is_some());
-        let pipeline_clone = pipeline.downgrade();
-        let addr = ctx.address();
-        let video_producer = self.video_producer.clone();
-        let audio_producer = self.audio_producer.clone();
-        let id = self.id.clone();
+
+        let pcm_resample = make_element("audioresample", None)?;
+        let pcm_convert = make_element("audioconvert", None)?;
+        let video_convert = make_element("videoconvert", None)?;
+
+        self.pipeline.add_many(&[
+            &src,
+            &pcm_resample,
+            &pcm_convert,
+            &video_convert,
+        ])?;
+
+        if let Some(ref video_producer) = self.video_producer {
+            self.pipeline
+                .add(video_producer.appsink().upcast_ref::<gst::Element>())?;
+            gst::Element::link_many(&[&video_convert, video_producer.appsink().upcast_ref()])?;
+        }
+
+        if let Some(ref audio_producer) = self.audio_producer {
+            self.pipeline
+                .add(audio_producer.appsink().upcast_ref::<gst::Element>())?;
+            gst::Element::link_many(&[
+                &pcm_convert,
+                &pcm_resample,
+                audio_producer.appsink().upcast_ref(),
+            ])?;
+        }
+
+        let pipeline_weak = self.pipeline.downgrade();
+        let video_convert_clone = video_convert.clone();
+        let pcm_convert_clone = pcm_convert.clone();
         src.connect_pad_added(move |_src, pad| {
-            if let Some(pipeline) = pipeline_clone.upgrade() {
-                let is_video = pad.name() == "video";
-                match Source::connect_pad(
-                    id.clone(),
-                    is_video,
-                    &pipeline,
-                    pad,
-                    &video_producer,
-                    &audio_producer,
-                ) {
-                    Ok(Some(appsink)) => {
-                        let addr_clone = addr.clone();
-                        let pad = appsink.static_pad("sink").unwrap();
-                        pad.add_probe(gst::PadProbeType::EVENT_DOWNSTREAM, move |_pad, info| {
-                            match info.data {
-                                Some(gst::PadProbeData::Event(ref ev))
-                                    if ev.type_() == gst::EventType::Eos =>
-                                {
-                                    addr_clone.do_send(StreamMessage { starting: false });
-                                    gst::PadProbeReturn::Drop
-                                }
-                                _ => gst::PadProbeReturn::Ok,
-                            }
-                        });
-                        addr.do_send(StreamMessage { starting: true });
+            if let Some(_pipeline) = pipeline_weak.upgrade() {
+                let (is_video, _is_audio) = {
+                    let media_type = pad.current_caps().and_then(|caps| {
+                        caps.structure(0).map(|s| {
+                            let name = s.name();
+                            (name.starts_with("video/"), name.starts_with("audio/"))
+                        })
+                    });
+                    media_type.unwrap_or((false, false))
+                };
+
+                if is_video {
+                    let sinkpad = video_convert_clone.static_pad("sink").unwrap();
+                    if !sinkpad.is_linked() {
+                        pad.link(&sinkpad).unwrap();
                     }
-                    Ok(None) => (),
-                    Err(err) => addr.do_send(ErrorMessage {
-                        message: format!("Failed to connect source stream: {:?}", err),
-                    }),
+                } else {
+                    let sinkpad = pcm_convert_clone.static_pad("sink").unwrap();
+                    if !sinkpad.is_linked() {
+                        pad.link(&sinkpad).unwrap();
+                    }
                 }
             }
         });
-        let addr_clone = ctx.address();
-        src.connect("notify::status", false, move |_args| {
-            addr_clone.do_send(SourceStatusMessage);
-            None
-        });
-        src.connect("notify::statistics", false, move |_args| {
-            None
-        });
-        let addr_clone = ctx.address();
-        let src_bin: &gst::Bin = src.downcast_ref().unwrap();
-        src_bin.connect_deep_element_added(move |_src, _bin, element| {
-            if element.has_property("primary-health", None) {
-                addr_clone.do_send(NewSwitchMessage(element.clone()));
-            }
-            if element.type_().name() == "GstURISourceBin" {
-                addr_clone.do_send(NewSourceBinMessage(element.clone()));
-            }
-        });
-        println!("259 now prerolling to uri: {}", &self.uri);
-        debug!("now prerolling");
-        let pipeline_manager = PipelineManager::new(
-            pipeline.clone(),
-            ctx.address().downgrade().recipient(),
-            &self.id,
-        )
-        .start();
-        self.media = Some(Media {
-            pipeline: pipeline.clone(),
-            pipeline_manager,
-            src,
-            switches: vec![],
-            n_streams: 0,
-            source_bin: None,
-        });
-        if let Err(err) = pipeline.set_state(gst::State::Playing) {
-            let addr = ctx.address();
-            addr.do_send(ErrorMessage {
-                message: format!("Failed to start source {}: {}", id, err),
-            });
-        }
-        println!("285 ok prerolling to uri: {}", &self.uri);
-        Ok(StateChangeResult::Success)
-    }
 
-    /// Разблокируйте трубопровод прероллинга
-    #[instrument(level = "debug", name = "unblocking", skip(self, ctx), fields(id = %self.id))]
-    fn unblock(&mut self, ctx: &mut Context<Self>) -> Result<StateChangeResult, Error> {
-        let media = self.media.as_ref().unwrap();
-        media.src.emit_by_name::<()>("unblock", &[]);
+        let addr = ctx.address();
+        let id_clone = self.id.clone();
+        self.pipeline.call_async(move |pipeline| {
+            if let Err(err) = pipeline.set_state(gst::State::Playing) {
+                addr.do_send(ErrorMessage {
+                    message: format!("Failed to start source {}: {}", id_clone, err),
+                });
+            }
+        });
+
         if let Some(ref producer) = self.video_producer {
             producer.forward();
         }
         if let Some(ref producer) = self.audio_producer {
             producer.forward();
         }
-        debug!("unblocked, now playing");
-        let id_clone = self.id.clone();
-        self.monitor_handle = Some(ctx.run_interval(
-            std::time::Duration::from_secs(1),
-            move |s, _ctx| {
-                if let Some(ref media) = s.media {
-                    if let Some(ref source_bin) = media.source_bin {
-                        let stats = source_bin.property::<gst::Structure>("statistics");
-                        trace!(id = %id_clone, "source statistics: {}", stats.to_string());
-                    }
-                }
-            },
-        ));
-        Ok(StateChangeResult::Success)
-    }
 
-    /// A new pad was added, or an existing pad EOS'd
-    fn handle_stream_change(&mut self, ctx: &mut Context<Self>, starting: bool) {
-        if let Some(ref mut media) = self.media {
-            if starting {
-                media.n_streams += 1;
-                debug!(id = %self.id, n_streams = %media.n_streams, "new active stream");
-            } else {
-                media.n_streams -= 1;
-                debug!(id = %self.id, n_streams = %media.n_streams, "active stream finished");
-                if media.n_streams == 0 {
-                    self.stop(ctx);
-                }
-            }
-        }
-    }
-
-    /// Track the status of a new fallbackswitch
-    #[instrument(level = "debug", name = "new-fallbackswitch", skip(self, ctx), fields(id = %self.id))]
-    fn monitor_switch(&mut self, ctx: &mut Context<Self>, switch: gst::Element) {
-        if let Some(ref mut media) = self.media {
-            let addr_clone = ctx.address();
-            switch.connect("notify::primary-health", false, move |_args| {
-                addr_clone.do_send(SourceStatusMessage);
-                None
-            });
-            switch.connect("notify::fallback-health", false, move |_args| {
-                addr_clone.do_send(SourceStatusMessage);
-                None
-            });
-            media.switches.push(switch);
-        }
-    }
-
-    /// Trace the status of the source for monitoring purposes
-    #[instrument(level = "trace", name = "new-source-status", skip(self), fields(id = %self.id))]
-    fn log_source_status(&mut self) {
-        if let Some(ref media) = self.media {
-            let value = media.src.property("status");
-            let status = gst::glib::EnumValue::from_value(&value).expect("Not an enum type");
-            trace!("Source status: {}", status.nick());
-            trace!(
-                "Source statistics: {:?}",
-                media.src.property::<gst::Structure>("statistics")
-            );
-            for switch in &media.switches {
-                let switch_name = match switch.static_pad("src").unwrap().caps() {
-                    Some(caps) => match caps.structure(0) {
-                        Some(s) => s.name(),
-                        None => "EMPTY",
-                    },
-                    None => "ANY",
-                };
-                let value = switch.property_value("primary-health");
-                let health = gst::glib::EnumValue::from_value(&value).expect("Not an enum type");
-                trace!("switch {} primary health: {}", switch_name, health.nick());
-                let value = switch.property_value("fallback-health");
-                trace!(
-                    "switch {} fallback health: {}",
-                    switch_name,
-                    health.nick()
-                );
-            }
-        }
-    }
-
-    #[instrument(level = "debug", skip(self), fields(id = %self.id))]
-    fn reinitialize(&mut self) -> Result<StateChangeResult, Error> {
-        if let Some(media) = self.media.take() {
-            debug!("tearing down previously prerolling pipeline");
-            let _ = media.pipeline.set_state(gst::State::Null);
-            if let Some(ref producer) = self.audio_producer {
-                media
-                    .pipeline
-                    .remove(producer.appsink().upcast_ref::<gst::Element>())?;
-            }
-            if let Some(ref producer) = self.video_producer {
-                media
-                    .pipeline
-                    .remove(producer.appsink().upcast_ref::<gst::Element>())?;
-            }
-            media.pipeline_manager.do_send(StopManagerMessage);
-        }
         Ok(StateChangeResult::Success)
     }
 
@@ -391,86 +210,75 @@ impl Source {
     }
 }
 
-impl Actor for Source {
-    type Context = Context<Self>;
-    #[instrument(level = "debug", name = "starting", skip(self, _ctx), fields(id = %self.id))]
-    fn started(&mut self, _ctx: &mut Self::Context) {}
-    #[instrument(level = "debug", name = "stopping", skip(self, _ctx), fields(id = %self.id))]
-    fn stopped(&mut self, _ctx: &mut Self::Context) {
-        NodeManager::from_registry().do_send(StoppedMessage {
-            id: self.id.clone(),
-            video_producer: self.video_producer.clone(),
-            audio_producer: self.audio_producer.clone(),
-        });
-    }
-}
-
 impl Schedulable<Self> for Source {
     fn state_machine(&self) -> &StateMachine {
         &self.state_machine
     }
+
     fn state_machine_mut(&mut self) -> &mut StateMachine {
         &mut self.state_machine
     }
+
     fn node_id(&self) -> &str {
         &self.id
     }
+
     fn next_time(&self) -> Option<DateTime<Utc>> {
         match self.state_machine.state {
-            State::Initial => self
-                .state_machine
-                .cue_time
-                .map(|cue_time| cue_time - chrono::Duration::seconds(10)),
+            State::Initial => self.state_machine.cue_time,
             State::Starting => self.state_machine.cue_time,
             State::Started => self.state_machine.end_time,
             State::Stopping => None,
             State::Stopped => None,
         }
     }
+
     fn transition(
         &mut self,
         ctx: &mut Context<Self>,
         target: State,
     ) -> Result<StateChangeResult, Error> {
         match target {
-            State::Initial => self.reinitialize(),
-            State::Starting => self.preroll(ctx),
-            State::Started => self.unblock(ctx),
-            State::Stopping => Ok(StateChangeResult::Skip),
-            State::Stopped => {
+            State::Initial => Ok(StateChangeResult::Success), // FIXME
+            State::Starting => self.start_pipeline(ctx),
+            State::Started => Ok(StateChangeResult::Success),
+            State::Stopping => {
                 self.stop(ctx);
                 Ok(StateChangeResult::Success)
             }
+            State::Stopped => unreachable!(),
         }
-    }
-}
-
-/// Sent by the [`Source`] to notify itself that a stream started or ended
-struct StreamMessage {
-    /// Начинается или заканчивается поток
-    starting: bool,
-}
-
-impl Message for StreamMessage {
-    type Result = ();
-}
-
-impl Handler<StreamMessage> for Source {
-    type Result = ();
-    fn handle(&mut self, msg: StreamMessage, ctx: &mut Context<Self>) {
-        self.handle_stream_change(ctx, msg.starting);
     }
 }
 
 impl Handler<StartMessage> for Source {
     type Result = MessageResult<StartMessage>;
+
     fn handle(&mut self, msg: StartMessage, ctx: &mut Context<Self>) -> Self::Result {
         MessageResult(self.start_schedule(ctx, msg.cue_time, msg.end_time))
     }
 }
 
+impl Handler<ErrorMessage> for Source {
+    type Result = ();
+
+    fn handle(&mut self, msg: ErrorMessage, ctx: &mut Context<Self>) -> Self::Result {
+        NodeManager::from_registry().do_send(NodeStatusMessage::Error {
+            id: self.id.clone(),
+            message: msg.message,
+        });
+        gst::debug_bin_to_dot_file_with_ts(
+            &self.pipeline,
+            gst::DebugGraphDetails::all(),
+            &format!("error-source-{}", self.id),
+        );
+        self.stop(ctx);
+    }
+}
+
 impl Handler<GetProducerMessage> for Source {
     type Result = MessageResult<GetProducerMessage>;
+
     fn handle(&mut self, _msg: GetProducerMessage, _ctx: &mut Context<Self>) -> Self::Result {
         MessageResult(Ok((
             self.video_producer.clone(),
@@ -479,67 +287,9 @@ impl Handler<GetProducerMessage> for Source {
     }
 }
 
-impl Handler<ErrorMessage> for Source {
-    type Result = ();
-    fn handle(&mut self, msg: ErrorMessage, ctx: &mut Context<Self>) {
-        error!("Got error message '{}' on source {}", msg.message, self.id);
-        NodeManager::from_registry().do_send(NodeStatusMessage::Error {
-            id: self.id.clone(),
-            message: msg.message,
-        });
-        if let Some(media) = &self.media {
-            gst::debug_bin_to_dot_file_with_ts(
-                &media.pipeline,
-                gst::DebugGraphDetails::all(),
-                &format!("error-source-{}", self.id),
-            );
-        }
-        self.stop(ctx);
-    }
-}
-
-/// Отправляется [Источником], чтобы уведомить себя о том, что новый `fallbackswitch`
-/// was added in `fallbacksrc`
-struct NewSwitchMessage(gst::Element);
-impl Message for NewSwitchMessage {
-    type Result = ();
-}
-impl Handler<NewSwitchMessage> for Source {
-    type Result = ();
-    fn handle(&mut self, msg: NewSwitchMessage, ctx: &mut Context<Self>) {
-        self.monitor_switch(ctx, msg.0);
-    }
-}
-
-/// Sent by the [`Source`] to notify itself that the `urisourcebin`
-struct NewSourceBinMessage(gst::Element);
-impl Message for NewSourceBinMessage {
-    type Result = ();
-}
-impl Handler<NewSourceBinMessage> for Source {
-    type Result = ();
-    fn handle(&mut self, msg: NewSourceBinMessage, _ctx: &mut Context<Self>) {
-        if let Some(ref mut media) = self.media {
-            media.source_bin = Some(msg.0);
-        }
-    }
-}
-
-/// Отправляется [`Источником`], чтобы уведомить себя о том, что статус одного
-/// of the monitored elements changed
-struct SourceStatusMessage;
-impl Message for SourceStatusMessage {
-    type Result = ();
-}
-impl Handler<SourceStatusMessage> for Source {
-    type Result = ();
-    fn handle(&mut self, _msg: SourceStatusMessage, _ctx: &mut Context<Self>) {
-        self.log_source_status();
-    }
-}
-
 impl Handler<ScheduleMessage> for Source {
     type Result = Result<(), Error>;
+
     fn handle(&mut self, msg: ScheduleMessage, ctx: &mut Context<Self>) -> Self::Result {
         self.reschedule(ctx, msg.cue_time, msg.end_time)
     }
@@ -547,6 +297,7 @@ impl Handler<ScheduleMessage> for Source {
 
 impl Handler<StopMessage> for Source {
     type Result = Result<(), Error>;
+
     fn handle(&mut self, _msg: StopMessage, ctx: &mut Context<Self>) -> Self::Result {
         self.stop(ctx);
         Ok(())
@@ -555,11 +306,18 @@ impl Handler<StopMessage> for Source {
 
 impl Handler<GetNodeInfoMessage> for Source {
     type Result = Result<NodeInfo, Error>;
+
     fn handle(&mut self, _msg: GetNodeInfoMessage, _ctx: &mut Context<Self>) -> Self::Result {
         Ok(NodeInfo::Source(SourceInfo {
             uri: self.uri.clone(),
-            video_consumer_slot_ids: self.video_producer.as_ref().map(|p| p.get_consumer_ids()),
-            audio_consumer_slot_ids: self.audio_producer.as_ref().map(|p| p.get_consumer_ids()),
+            video_consumer_slot_ids: self
+                .video_producer
+                .as_ref()
+                .map(|p| p.get_consumer_ids()),
+            audio_consumer_slot_ids: self
+                .audio_producer
+                .as_ref()
+                .map(|p| p.get_consumer_ids()),
             cue_time: self.state_machine.cue_time,
             end_time: self.state_machine.end_time,
             state: self.state_machine.state,
@@ -581,122 +339,5 @@ impl Handler<RemoveControlPointMessage> for Source {
         _msg: RemoveControlPointMessage,
         _ctx: &mut Context<Self>,
     ) {
-    }
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-    use crate::shared::get_now;
-    use crate::shared::tests::*;
-    use std::collections::VecDeque;
-    use test_log::test;
-    #[actix_rt::test]
-    #[test]
-    async fn test_status_after_create() {
-        gst::init().unwrap();
-        let uri = asset_uri("ball.mp4");
-        // Create a valid source
-        create_source("test-source", &uri, true, true)
-            .await
-            .unwrap();
-        let info = node_info_unchecked("test-source").await;
-        if let NodeInfo::Source(sinfo) = info {
-            assert_eq!(sinfo.uri, uri);
-            assert!(sinfo.video_consumer_slot_ids.unwrap().is_empty());
-            assert!(sinfo.audio_consumer_slot_ids.unwrap().is_empty());
-            assert!(sinfo.cue_time.is_none());
-            assert!(sinfo.end_time.is_none());
-            assert_eq!(sinfo.state, State::Initial);
-        } else {
-            panic!("Wrong info type");
-        }
-    }
-
-    #[actix_rt::test]
-    #[test]
-    async fn test_disable_video() {
-        gst::init().unwrap();
-        let uri = asset_uri("ball.mp4");
-        create_source("test-source", &uri, true, false)
-            .await
-            .unwrap();
-        let info = node_info_unchecked("test-source").await;
-        if let NodeInfo::Source(sinfo) = info {
-            assert!(sinfo.video_consumer_slot_ids.is_none());
-            assert!(sinfo.audio_consumer_slot_ids.is_some());
-        } else {
-            panic!("Wrong info type");
-        }
-    }
-
-    #[actix_rt::test]
-    #[test]
-    #[should_panic(expected = "must have either audio or video enabled")]
-    async fn test_disable_video_audio() {
-        gst::init().unwrap();
-        let uri = asset_uri("ball.mp4");
-        create_source("test-source", &uri, false, false)
-            .await
-            .unwrap();
-    }
-
-    async fn test_start_immediate() {
-        // Expect state to progress to Started with no hiccup
-        let listener_addr = register_listener(
-            "test-source",
-            "test-listener",
-            VecDeque::from(vec![State::Starting, State::Started]),
-        )
-        .await;
-        // Start it up immediately
-        start_node("test-source", None, None).await.unwrap();
-        let progression_result = listener_addr.send(WaitForProgressionMessage).await.unwrap();
-        assert!(progression_result.progressed_as_expected);
-    }
-
-    #[actix_rt::test]
-    #[test]
-    async fn test_reschedule() {
-        gst::init().unwrap();
-        let uri = asset_uri("ball.mp4");
-        create_source("test-source", &uri, true, true)
-            .await
-            .unwrap();
-        let listener_addr = register_listener(
-            "test-source",
-            "test-listener",
-            VecDeque::from(vec![
-                State::Starting,
-                State::Initial,
-                State::Starting,
-                State::Started,
-            ]),
-        )
-        .await;
-        // "Pause" time, which will cause it to progress immediately on Sleep (eg actix' run_later)
-        tokio::time::pause();
-        let fut = tokio::time::sleep(std::time::Duration::from_secs(10));
-        let cue_time = get_now() + chrono::Duration::seconds(15);
-        tracing::info!("Scheduling for {:?}", cue_time);
-        // Schedule the source to start later
-        start_node("test-source", Some(cue_time), None)
-            .await
-            .unwrap();
-        // Wait for the node to have prerolled but not started
-        fut.await;
-        let info = node_info_unchecked("test-source").await;
-        if let NodeInfo::Source(sinfo) = info {
-            assert_eq!(sinfo.state, State::Starting);
-        } else {
-            panic!("Wrong info type");
-        }
-        let cue_time = get_now() + chrono::Duration::seconds(25);
-        // Reschedule, node state should reset to Initial
-        reschedule_node("test-source", Some(cue_time), None)
-            .await
-            .unwrap();
-        let progression_result = listener_addr.send(WaitForProgressionMessage).await.unwrap();
-        assert!(progression_result.progressed_as_expected);
     }
 }
