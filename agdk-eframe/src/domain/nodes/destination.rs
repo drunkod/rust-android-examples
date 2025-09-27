@@ -123,7 +123,7 @@ impl Destination {
             gst_utils::StreamProducer::configure_consumer(appsrc);
         }
         let pipeline = gst::Pipeline::new();
-        pipeline.set_name(&format!("destination-pipeline-{}", id));
+        pipeline.set_property("name", &format!("destination-pipeline-{}", id));
         Self {
             id: id.to_string(),
             family: family.clone(),

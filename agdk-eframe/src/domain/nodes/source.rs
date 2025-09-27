@@ -14,8 +14,8 @@ use crate::shared::{
 };
 use auteur_controlling::controller::{NodeInfo, SourceInfo, State};
 use super::messages::{
-    GetNodeInfoMessage, GetProducerMessage, NodeStatusMessage, ScheduleMessage, StartMessage,
-    StopMessage, StoppedMessage,
+    AddControlPointMessage, GetNodeInfoMessage, GetProducerMessage, NodeStatusMessage,
+    RemoveControlPointMessage, ScheduleMessage, StartMessage, StopMessage, StoppedMessage,
 };
 use super::node::NodeManager;
 
