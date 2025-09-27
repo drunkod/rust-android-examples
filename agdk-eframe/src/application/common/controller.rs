@@ -1,6 +1,5 @@
 use serde::{Deserialize, Serialize};
 use chrono::{DateTime, Utc};
-use uuid::Uuid;
 /// Definition of the service protocol
 ///
 /// WARNING: unstable

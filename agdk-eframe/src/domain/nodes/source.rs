@@ -14,8 +14,8 @@ use crate::shared::{
 };
 use auteur_controlling::controller::{NodeInfo, SourceInfo, State};
 use super::messages::{
-    GetNodeInfoMessage, GetProducerMessage, NodeStatusMessage, ScheduleMessage, StartMessage,
-    StopMessage, StoppedMessage,
+    AddControlPointMessage, GetNodeInfoMessage, GetProducerMessage, NodeStatusMessage,
+    RemoveControlPointMessage, ScheduleMessage, StartMessage, StopMessage, StoppedMessage,
 };
 use super::node::NodeManager;
 
@@ -108,7 +108,7 @@ impl Source {
         };
 
         let pipeline = gst::Pipeline::new();
-        pipeline.upcast_ref::<gst::Object>().set_name(&format!("source-pipeline-{}", id));
+        pipeline.set_property("name", &format!("source-pipeline-{}", id));
 
         Self {
             id: id.to_string(),

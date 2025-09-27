@@ -152,7 +152,7 @@ impl VideoOutput {
                 //rainbow test screen
                 vsrc.set_property_from_str("pattern", "smpte");
                 bin.add(&vsrc)?;
-                gst::GhostPad::with_target(Some("src"), &vsrc.static_pad("src").unwrap())
+                gst::GhostPad::with_target(&vsrc.static_pad("src").unwrap())
                     .unwrap()
             }
             _ => {
@@ -171,7 +171,7 @@ impl VideoOutput {
                     }
                 });
                 filesrc.link(&decodebin)?;
-                gst::GhostPad::with_target(Some("src"), &imagefreeze.static_pad("src").unwrap())
+                gst::GhostPad::with_target(&imagefreeze.static_pad("src").unwrap())
                     .unwrap()
             }
         };
@@ -205,11 +205,11 @@ impl VideoOutput {
             if let Some(ref mut caps) = caps {
                 if id == "width" {
                     let width = setting.lock().unwrap().as_i32().unwrap();
-                    caps.make_mut().set(&[("width", &width)]);
+                    caps.make_mut().set("width", width);
                     base_plate_pad.set_property("width", width);
                 } else if id == "height" {
                     let height = setting.lock().unwrap().as_i32().unwrap();
-                    caps.make_mut().set(&[("height", &height)]);
+                    caps.make_mut().set("height", height);
                     base_plate_pad.set_property("height", height);
                 }
             }
@@ -654,7 +654,7 @@ impl Mixer {
             return Err(anyhow!("Mixer must have at least one of audio or video enabled"));
         }
         let pipeline = gst::Pipeline::new();
-        pipeline.set_name(&format!("mixer-pipeline-{}", id));
+        pipeline.set_property("name", &format!("mixer-pipeline-{}", id));
         let audio_output = if audio {
             let output = AudioOutput::new(id);
             pipeline
@@ -744,8 +744,7 @@ impl Mixer {
             bin.add_many(&[appsrc_elem, &queue])?;
             pipeline.add(&bin)?;
             bin.sync_state_with_parent()?;
-            let ghost =
-                gst::GhostPad::with_target(Some("src"), &queue.static_pad("src").unwrap()).unwrap();
+            let ghost = gst::GhostPad::with_target(&queue.static_pad("src").unwrap()).unwrap();
             bin.add_pad(&ghost).unwrap();
             gst::Element::link_many(&[appsrc_elem, &queue])?;
             let srcpad = bin.static_pad("src").unwrap();
@@ -773,8 +772,7 @@ impl Mixer {
             bin.sync_state_with_parent()?;
             slot.pad.set_property("volume", volume);
             gst::Element::link_many(&[appsrc_elem, &conv, &resample, &capsfilter, &queue])?;
-            let ghost =
-                gst::GhostPad::with_target(Some("src"), &queue.static_pad("src").unwrap()).unwrap();
+            let ghost = gst::GhostPad::with_target(&queue.static_pad("src").unwrap()).unwrap();
             bin.add_pad(&ghost).unwrap();
             let srcpad = bin.static_pad("src").unwrap();
             srcpad.link(&slot.pad)?;
