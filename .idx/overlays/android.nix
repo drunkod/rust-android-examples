@@ -1,4 +1,4 @@
-# .idx/android-overlay.nix
+# .idx/overlays/android.nix
 { pkgs }:
 
 self: super: {
