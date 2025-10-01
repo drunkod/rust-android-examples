@@ -8,6 +8,10 @@ let
     # Ensure VS Code has access to Nix tools
     # export PATH="${pkgs.nix}/bin:$PATH"
 
+    # Pass through browser settings to VS Code
+    export BROWSER="''${BROWSER:-chromium-dev}"
+    export DEFAULT_BROWSER="''${DEFAULT_BROWSER:-chromium-dev}"
+    export PATH="${pkgs.lib.makeBinPath [ pkgs.xdg-utils pkgs.chromium ]}:$PATH"
     # Create VS Code settings if needed
     ws_dir="''${VSCODE_WORKSPACE_DIR:-$PWD}"
     cfg_dir="$ws_dir/.vscode"
@@ -26,6 +30,11 @@ let
           "args": ["-l"]
         }
       },
+        # "terminal.integrated.env.linux": {
+        #   "BROWSER": "chromium-dev",
+        #   "DEFAULT_BROWSER": "chromium-dev"
+        # },
+        # "workbench.externalBrowser": "chromium-dev",
       "nix.enableLanguageServer": true,
       "nix.serverPath": "${pkgs.nil}/bin/nil"
     }

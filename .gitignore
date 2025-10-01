@@ -6,3 +6,4 @@ gstreamer-android/out/*
 scripts/__pycache__/node.cpython-311.pyc
 target/
 targetet
+agdk-eframe/depend

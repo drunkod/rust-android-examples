@@ -9,6 +9,11 @@
       }
     }
   },
+    "terminal.integrated.env.linux": {
+    "BROWSER": "/home/reader/Документы/rust-android-examples/chromium-dev-wrapper.sh",
+    "DEFAULT_BROWSER": "/home/reader/Документы/rust-android-examples/chromium-dev-wrapper.sh"
+  },
+  "workbench.externalBrowser": "/home/reader/Документы/rust-android-examples/chromium-dev-wrapper.sh",
   "nix.enableLanguageServer": true,
   "nix.serverSettings": {
     "nil": {
@@ -39,7 +44,7 @@
   "http.systemCertificates": false,
 
   // We’re explicitly setting the proxy above; don’t try OS proxy.
-  "http.useLocalProxyConfiguration": false,
+  "http.useLocalProxyConfiguration": false
 
   // Terminal env only affects the integrated terminal, not VS Code itself,
   // but keeping them doesn’t hurt.
