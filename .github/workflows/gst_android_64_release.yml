@@ -64,7 +64,7 @@ jobs:
            cp ./gstreamer/libs/${{ matrix.abi }}/libgstreamer_android.so ${{ github.workspace }}/artifacts
 
       - name: Publish
-        uses: actions/upload-artifact@v2
+        uses: actions/upload-artifact@v4.6.2
         with:
           name: AndroidGStreamer
           path: |
