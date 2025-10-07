@@ -8,7 +8,7 @@ on:
     - '*'
     
 env:
-  GStreamerVersion: 1.22.5
+  GStreamerVersion: 1.26.6
 
 jobs:
   Android:
@@ -33,7 +33,7 @@ jobs:
         id: setup-ndk
         uses: nttld/setup-ndk@v1
         with:
-          ndk-version: r21e
+          ndk-version: r25c
           local-cache: true          
 
       - name: Download GStreamer
