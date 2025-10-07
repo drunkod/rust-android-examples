@@ -5,7 +5,16 @@ on:
     tags:
       - 'v*' # Best practice to trigger releases only on version tags like v1.0
   pull_request:
-
+  workflow_dispatch:
+    inputs:
+      build_mode:
+        description: 'Build mode (debug/release)'
+        required: false
+        default: 'debug'
+        type: choice
+        options:
+          - debug
+          - release
 env:
   GStreamerVersion: 1.26.6 # Using a slightly older, but very stable version for this example. Can be changed back.
 
