@@ -112,13 +112,19 @@ jobs:
             exit 1
           fi
           
-          # Set GSTREAMER_ROOT_ANDROID to the architecture-specific directory
+          # Set both GSTREAMER_ROOT and GSTREAMER_ROOT_ANDROID
+          export GSTREAMER_ROOT=${{ github.workspace }}/gstreamer_android/$GST_ARCH_DIR
           export GSTREAMER_ROOT_ANDROID=${{ github.workspace }}/gstreamer_android/$GST_ARCH_DIR
           
+          # Define which GStreamer plugins to include (customize as needed)
+          export GSTREAMER_PLUGINS="coreelements app audioconvert audioresample audioparsers playback typefindfunctions"
+          
+          echo "GSTREAMER_ROOT is set to: ${GSTREAMER_ROOT}"
           echo "GSTREAMER_ROOT_ANDROID is set to: ${GSTREAMER_ROOT_ANDROID}"
+          echo "GSTREAMER_PLUGINS is set to: ${GSTREAMER_PLUGINS}"
           
           # Verify the gstreamer-1.0.mk file exists
-          if [ -f "${GSTREAMER_ROOT_ANDROID}/share/gst-android/ndk-build/gstreamer-1.0.mk" ]; then
+          if [ -f "${GSTREAMER_ROOT}/share/gst-android/ndk-build/gstreamer-1.0.mk" ]; then
             echo "✓ Found gstreamer-1.0.mk"
           else
             echo "✗ ERROR: gstreamer-1.0.mk not found at expected location"
@@ -126,12 +132,12 @@ jobs:
           fi
           
           echo "=== Building libgstreamer_android.so for ${{ matrix.abi }} ==="
-          ndk-build NDK_PROJECT_PATH=. NDK_APPLICATION_MK=./jni/Application.mk
+          ndk-build NDK_PROJECT_PATH=. NDK_APPLICATION_MK=./jni/Application.mk V=1
           
           echo "=== Build complete. Listing output files: ==="
           ls -lR libs/ || echo "libs directory not found"
           ls -l libs/${{ matrix.abi }}/ || echo "${{ matrix.abi }} directory not found"
-
+          
       - name: Prepare Artifacts
         run: |
           mkdir -p artifacts
