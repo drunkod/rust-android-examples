@@ -85,15 +85,15 @@ jobs:
           
           # Android.mk
           cat > jni/Android.mk << 'EOF'
-LOCAL_PATH := $(call my-dir)
-include $(CLEAR_VARS)
-
-LOCAL_MODULE := gstreamer_android
-
-# Point to the architecture-specific GStreamer directory
-GSTREAMER_NDK_BUILD_PATH := $(GSTREAMER_ROOT_ANDROID)/share/gst-android/ndk-build
-include $(GSTREAMER_NDK_BUILD_PATH)/gstreamer-1.0.mk
-EOF
+          LOCAL_PATH := $(call my-dir)
+          include $(CLEAR_VARS)
+          
+          LOCAL_MODULE := gstreamer_android
+          
+          # Point to the architecture-specific GStreamer directory
+          GSTREAMER_NDK_BUILD_PATH := $(GSTREAMER_ROOT_ANDROID)/share/gst-android/ndk-build
+          include $(GSTREAMER_NDK_BUILD_PATH)/gstreamer-1.0.mk
+          EOF
           
           echo "=== Android.mk contents: ==="
           cat jni/Android.mk
