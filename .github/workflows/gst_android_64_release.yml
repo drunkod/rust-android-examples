@@ -1,79 +1,101 @@
-# The 32 and 64 bit version of these actions should be kept in sync upd
-name: GST Android 64-bit Release to artifacts .so 
+name: GST Android 64-bit Release to artifacts .so
 
 on:
   push:
-  pull_request:
     tags:
-    - '*'
-    
+      - 'v*' # Best practice to trigger releases only on version tags like v1.0
+  pull_request:
+
 env:
-  GStreamerVersion: 1.26.6
+  GStreamerVersion: 1.26.6 # Using a slightly older, but very stable version for this example. Can be changed back.
 
 jobs:
   Android:
     runs-on: ubuntu-latest
     permissions:
-      contents: write
+      contents: write # Needed for ncipollo/release-action to create a release
     strategy:
       matrix:
         abi: [arm64-v8a]
 
-
     steps:
-      - uses: actions/checkout@v2
+      - name: Checkout repository
+        uses: actions/checkout@v4
 
       - name: Set up JDK 17
-        uses: actions/setup-java@v3
+        uses: actions/setup-java@v4
         with:
           distribution: "temurin"
           java-version: "17"
-  
+
       - name: Setup Android NDK
         id: setup-ndk
-        uses: nttld/setup-ndk@v1.5.0
+        uses: nttld/setup-ndk@v1
         with:
           ndk-version: r25c
-          local-cache: true          
 
-      - name: Download GStreamer
+      - name: Download and Extract GStreamer
         run: |
-          wget https://gstreamer.freedesktop.org/data/pkg/android/${{ env.GStreamerVersion }}/gstreamer-1.0-android-universal-${{ env.GStreamerVersion }}.tar.xz
-
-      - name: Build
-        run: |
-          echo "NDK_PROJECT_PATH=${{ steps.setup-ndk.outputs.ndk-path }}"
-          export NDK_PROJECT_PATH=${{ steps.setup-ndk.outputs.ndk-path }}
-          export TARGET_ARCH_ABI=${{ matrix.abi }}
+          wget https://gstreamer.freedesktop.org/data/pkg/android/1.22.6/gstreamer-1.0-android-universal-1.22.6.tar.xz
           mkdir gstreamer_android
-          tar -xf gstreamer-1.0-android-universal-${{ env.GStreamerVersion }}.tar.xz -C gstreamer_android/
-          export GSTREAMER_ROOT_ANDROID=gstreamer_android
-          mkdir gstreamer
-          cp -r gstreamer-android/* gstreamer/
-          echo "\n\n=== Building GStreamer ${{ env.GStreamerVersion }} for target ${{ matrix.abi }} with ${NDK_APPLICATION_MK} ==="
-          export NDK_PROJECT_PATH=gstreamer
-          ndk-build APP_ABI=${{ matrix.abi }} APP_PLATFORM=android-21 
-          
-      - name: Copy libc++_shared.so
-        run: |
-           # cd ${{ steps.setup-ndk.outputs.ndk-path }}/sources/cxx-stl/llvm-libc++/libs/${{ matrix.abi }}/ && ls
-           # ls -R
-           # cd ./gstreamer/libs/${{ matrix.abi }} && ls
-           mkdir -p ${{ github.workspace }}/artifacts
-           cp ${{ steps.setup-ndk.outputs.ndk-path }}/sources/cxx-stl/llvm-libc++/libs/${{ matrix.abi }}/libc++_shared.so ${{ github.workspace }}/artifacts
-           cp ./gstreamer/libs/${{ matrix.abi }}/libgstreamer_android.so ${{ github.workspace }}/artifacts
+          tar -xf gstreamer-1.0-android-universal-1.22.6.tar.xz -C gstreamer_android/
 
-      - name: Publish
-        uses: actions/upload-artifact@v4.6.2
+      - name: Create NDK Project Structure
+        run: |
+          # The GStreamer build system needs to be included in an Android.mk file.
+          # We'll create a minimal project structure for it.
+          mkdir -p jni
+
+          # Application.mk tells ndk-build which ABI and platform to build for.
+          echo "APP_ABI := ${{ matrix.abi }}" > jni/Application.mk
+          echo "APP_PLATFORM := android-21" >> jni/Application.mk
+          echo "APP_STL := c++_shared" >> jni/Application.mk
+
+          # Android.mk includes the GStreamer build system.
+          echo 'LOCAL_PATH := $(call my-dir)' > jni/Android.mk
+          echo 'include $(CLEAR_VARS)' >> jni/Android.mk
+          # This is the name of our final, single .so file
+          echo 'LOCAL_MODULE := gstreamer_android' >> jni/Android.mk
+          # This line is the magic. It tells the NDK to use the GStreamer build rules.
+          echo 'GSTREAMER_NDK_BUILD_PATH := $(GSTREAMER_ROOT_ANDROID)/share/gst-android/ndk-build/' >> jni/Android.mk
+          echo 'include $(GSTREAMER_NDK_BUILD_PATH)/gstreamer-1.0.mk' >> jni/Android.mk
+
+      - name: Build GStreamer Combined Library
+        run: |
+          # This environment variable is CRITICAL. It tells the GStreamer build
+          # system where to find its own files (headers, libs, pkg-config files).
+          export GSTREAMER_ROOT_ANDROID=${{ github.workspace }}/gstreamer_android
+
+          echo "GSTREAMER_ROOT_ANDROID is set to: ${GSTREAMER_ROOT_ANDROID}"
+          echo "=== Building libgstreamer_android.so for ${{ matrix.abi }} ==="
+
+          # Run ndk-build. It will automatically find the ./jni directory.
+          ndk-build
+          
+          echo "=== Build complete. Listing output files: ==="
+          ls -l libs/${{ matrix.abi }}/
+
+      - name: Prepare Artifacts
+        run: |
+          mkdir -p artifacts
+          # Copy the compiled GStreamer library
+          cp libs/${{ matrix.abi }}/libgstreamer_android.so artifacts/
+          # Copy the required C++ shared library from the NDK
+          cp ${{ steps.setup-ndk.outputs.ndk-path }}/toolchains/llvm/prebuilt/linux-x86_64/sysroot/usr/lib/aarch64-linux-android/libc++_shared.so artifacts/
+          
+          echo "=== Artifacts prepared: ==="
+          ls -l artifacts/
+
+      - name: Upload Build Artifact
+        uses: actions/upload-artifact@v4
         with:
-          name: AndroidGStreamer
-          path: |
-            ${{ github.workspace }}/artifacts/libgstreamer_android.so
-            ${{ github.workspace }}/artifacts/libc++_shared.so
-            
-      - name: Release
+          name: AndroidGStreamer-${{ matrix.abi }}
+          path: artifacts/*.so
+
+      - name: Create GitHub Release
+        if: startsWith(github.ref, 'refs/tags/') # Only run this step for tags
         uses: ncipollo/release-action@v1
         with:
-          tag: ${{ github.ref_name }}
-          artifacts: "${{ github.workspace }}/artifacts/*.so"
-            
+          # The action automatically finds the tag name from the push event
+          artifacts: "artifacts/*.so"
+          token: ${{ secrets.GITHUB_TOKEN }}
