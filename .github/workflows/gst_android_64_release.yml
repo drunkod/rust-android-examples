@@ -31,7 +31,7 @@ jobs:
   
       - name: Setup Android NDK
         id: setup-ndk
-        uses: nttld/setup-ndk@v1
+        uses: nttld/setup-ndk@v1.5.0
         with:
           ndk-version: r25c
           local-cache: true          
