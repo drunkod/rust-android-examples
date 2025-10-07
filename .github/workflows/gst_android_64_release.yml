@@ -3,7 +3,7 @@ name: GST Android 64-bit Release to artifacts .so
 on:
   push:
     tags:
-      - 'v*' # Best practice to trigger releases only on version tags like v1.0
+      - 'v*'
   pull_request:
   workflow_dispatch:
     inputs:
@@ -15,14 +15,15 @@ on:
         options:
           - debug
           - release
+
 env:
-  GStreamerVersion: 1.26.6 # Using a slightly older, but very stable version for this example. Can be changed back.
+  GStreamerVersion: 1.26.6
 
 jobs:
   Android:
     runs-on: ubuntu-latest
     permissions:
-      contents: write # Needed for ncipollo/release-action to create a release
+      contents: write
     strategy:
       matrix:
         abi: [arm64-v8a]
@@ -48,48 +49,93 @@ jobs:
           wget https://gstreamer.freedesktop.org/data/pkg/android/${{ env.GStreamerVersion }}/gstreamer-1.0-android-universal-${{ env.GStreamerVersion }}.tar.xz
           mkdir gstreamer_android
           tar -xf gstreamer-1.0-android-universal-${{ env.GStreamerVersion }}.tar.xz -C gstreamer_android/
+          
+          echo "=== GStreamer extracted structure: ==="
+          ls -la gstreamer_android/
+          
+          # Check if the expected directory exists
+          if [ -d "gstreamer_android/arm64" ]; then
+            echo "Found arm64 directory"
+            ls -la gstreamer_android/arm64/share/gst-android/ndk-build/ || echo "ndk-build directory not found"
+          elif [ -d "gstreamer_android/armv8" ]; then
+            echo "Found armv8 directory"
+            ls -la gstreamer_android/armv8/share/gst-android/ndk-build/ || echo "ndk-build directory not found"
+          fi
 
       - name: Create NDK Project Structure
         run: |
-          # The GStreamer build system needs to be included in an Android.mk file.
-          # We'll create a minimal project structure for it.
           mkdir -p jni
-
-          # Application.mk tells ndk-build which ABI and platform to build for.
+          
+          # Determine the correct architecture folder name
+          if [ -d "gstreamer_android/arm64" ]; then
+            GST_ARCH_DIR="arm64"
+          elif [ -d "gstreamer_android/armv8" ]; then
+            GST_ARCH_DIR="armv8"
+          else
+            echo "ERROR: Could not find arm64 or armv8 directory"
+            exit 1
+          fi
+          
+          echo "Using GStreamer architecture directory: $GST_ARCH_DIR"
+          
+          # Application.mk
           echo "APP_ABI := ${{ matrix.abi }}" > jni/Application.mk
           echo "APP_PLATFORM := android-21" >> jni/Application.mk
           echo "APP_STL := c++_shared" >> jni/Application.mk
+          
+          # Android.mk
+          cat > jni/Android.mk << 'EOF'
+LOCAL_PATH := $(call my-dir)
+include $(CLEAR_VARS)
 
-          # Android.mk includes the GStreamer build system.
-          echo 'LOCAL_PATH := $(call my-dir)' > jni/Android.mk
-          echo 'include $(CLEAR_VARS)' >> jni/Android.mk
-          # This is the name of our final, single .so file
-          echo 'LOCAL_MODULE := gstreamer_android' >> jni/Android.mk
-          # This line is the magic. It tells the NDK to use the GStreamer build rules.
-          echo 'GSTREAMER_NDK_BUILD_PATH := $(GSTREAMER_ROOT_ANDROID)/share/gst-android/ndk-build/' >> jni/Android.mk
-          echo 'include $(GSTREAMER_NDK_BUILD_PATH)/gstreamer-1.0.mk' >> jni/Android.mk
+LOCAL_MODULE := gstreamer_android
+
+# Point to the architecture-specific GStreamer directory
+GSTREAMER_NDK_BUILD_PATH := $(GSTREAMER_ROOT_ANDROID)/share/gst-android/ndk-build
+include $(GSTREAMER_NDK_BUILD_PATH)/gstreamer-1.0.mk
+EOF
+          
+          echo "=== Android.mk contents: ==="
+          cat jni/Android.mk
+          echo "=== Application.mk contents: ==="
+          cat jni/Application.mk
 
       - name: Build GStreamer Combined Library
         run: |
-          # This environment variable is CRITICAL. It tells the GStreamer build
-          # system where to find its own files (headers, libs, pkg-config files).
-          export GSTREAMER_ROOT_ANDROID=${{ github.workspace }}/gstreamer_android
-
+          # Determine the correct architecture folder
+          if [ -d "gstreamer_android/arm64" ]; then
+            GST_ARCH_DIR="arm64"
+          elif [ -d "gstreamer_android/armv8" ]; then
+            GST_ARCH_DIR="armv8"
+          else
+            echo "ERROR: Could not find arm64 or armv8 directory"
+            exit 1
+          fi
+          
+          # Set GSTREAMER_ROOT_ANDROID to the architecture-specific directory
+          export GSTREAMER_ROOT_ANDROID=${{ github.workspace }}/gstreamer_android/$GST_ARCH_DIR
+          
           echo "GSTREAMER_ROOT_ANDROID is set to: ${GSTREAMER_ROOT_ANDROID}"
+          
+          # Verify the gstreamer-1.0.mk file exists
+          if [ -f "${GSTREAMER_ROOT_ANDROID}/share/gst-android/ndk-build/gstreamer-1.0.mk" ]; then
+            echo "✓ Found gstreamer-1.0.mk"
+          else
+            echo "✗ ERROR: gstreamer-1.0.mk not found at expected location"
+            exit 1
+          fi
+          
           echo "=== Building libgstreamer_android.so for ${{ matrix.abi }} ==="
-
-          # Run ndk-build. It will automatically find the ./jni directory.
-          ndk-build
+          ndk-build NDK_PROJECT_PATH=. NDK_APPLICATION_MK=./jni/Application.mk
           
           echo "=== Build complete. Listing output files: ==="
-          ls -l libs/${{ matrix.abi }}/
+          ls -lR libs/ || echo "libs directory not found"
+          ls -l libs/${{ matrix.abi }}/ || echo "${{ matrix.abi }} directory not found"
 
       - name: Prepare Artifacts
         run: |
           mkdir -p artifacts
-          # Copy the compiled GStreamer library
           cp libs/${{ matrix.abi }}/libgstreamer_android.so artifacts/
-          # Copy the required C++ shared library from the NDK
           cp ${{ steps.setup-ndk.outputs.ndk-path }}/toolchains/llvm/prebuilt/linux-x86_64/sysroot/usr/lib/aarch64-linux-android/libc++_shared.so artifacts/
           
           echo "=== Artifacts prepared: ==="
@@ -102,9 +148,8 @@ jobs:
           path: artifacts/*.so
 
       - name: Create GitHub Release
-        if: startsWith(github.ref, 'refs/tags/') # Only run this step for tags
+        if: startsWith(github.ref, 'refs/tags/')
         uses: ncipollo/release-action@v1
         with:
-          # The action automatically finds the tag name from the push event
           artifacts: "artifacts/*.so"
           token: ${{ secrets.GITHUB_TOKEN }}
